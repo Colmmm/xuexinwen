@@ -1,23 +1,31 @@
-# Use an official Node.js image as the base image
-FROM node:14
+# Stage 1: Build React app
+FROM node:14 AS build
 
-# Set the working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the entire app to the working directory
+# Install Axios
+RUN npm install axios
+
+# Copy the entire app
 COPY . .
 
 # Build the React app
 RUN npm run build
 
-# Expose a port (e.g., 3000) if needed
-EXPOSE 3000
+# Stage 2: Serve the React app using a lightweight server
+FROM nginx:alpine
 
-# Define the command to start the app
-CMD ["npm", "start"]
+# Copy the built React app from the previous stage
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Default command to start Nginx and serve the app
+CMD ["nginx", "-g", "daemon off;"]
