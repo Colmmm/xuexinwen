@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+backend/notebooks/
 
 # production
 /build
