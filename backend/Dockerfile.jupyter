@@ -1,6 +1,9 @@
 # Use an official Jupyter Notebook image as the base image
 FROM jupyter/base-notebook:latest
 
+# Set the environment variable
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
+
 # Set the working directory
 WORKDIR /app
 

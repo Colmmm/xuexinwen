@@ -10,6 +10,9 @@ COPY . /app
 # Create a virtual environment
 RUN python -m venv venv
 
+# Set the environment variable
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
+
 # Activate the virtual environment
 SHELL ["/bin/bash", "-c"]
 RUN source venv/bin/activate
