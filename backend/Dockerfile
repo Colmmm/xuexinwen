@@ -7,18 +7,13 @@ WORKDIR /app
 # Copy the current directory contents into the container
 COPY . /app
 
-# Create a virtual environment
-RUN python -m venv venv
-
 # Set the environment variable
 ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
-# Activate the virtual environment
-SHELL ["/bin/bash", "-c"]
-RUN source venv/bin/activate
-
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Create a virtual environment and install necessary packages
+RUN python -m venv venv && \
+    . venv/bin/activate && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Make port 5000 available to the world outside this container
 EXPOSE 5000

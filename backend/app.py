@@ -1,3 +1,4 @@
+import json
 from flask import Flask, jsonify
 from gnews import GNews
 
