@@ -1,7 +1,9 @@
-import time
-import os
+import time, os, json, hashlib
+import xml.etree.ElementTree as ET
+import openai
 from gnews import GNews
 from newspaper import Article
+from prompts import get_text_prompt, get_dict_prompt
 
 class XueArticle(Article):
 
@@ -15,6 +17,9 @@ class XueArticle(Article):
             raise ValueError("Either a URL or a topic must be provided.")
             
         if self.url:
+            # Generate a unique ID based on the URL using SHA-256 hash + with "a" prefix so doesn't start with number (also slicing it so not as long)
+            self.article_id = "a" + hashlib.sha256(url.encode()).hexdigest()[:15]
+            # Use url to download and parse article 
             super().__init__(self.url)
             self.download()
             self.parse()
