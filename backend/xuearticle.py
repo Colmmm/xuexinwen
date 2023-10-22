@@ -53,3 +53,80 @@ class XueArticle(Article):
             max_tokens=3000, 
             n=1  
         )
+
+        # XML-like data outputed
+        raw_xml = "<root>" + response['choices'][0]['text'] + "</root>"
+
+        # Parse the XML
+        parsed_xml = ET.fromstring(raw_xml) 
+        return parsed_xml
+
+
+    def simplify_text(self):
+        # get prompt for openai api to simplify text
+        prompt = get_text_prompt(self)
+
+        # call api, output will be xml data
+        simplified_article = self._call_openai_api(prompt) 
+
+        # extract title and text from xml data
+        self.simplified_title = simplified_article.find("title").text
+        self.simplified_text = simplified_article.find("text").text
+
+
+
+    def generate_dict(self):
+        # get prompt for openai api to simplify text
+        prompt = get_dict_prompt(self)
+
+        # call api, output will be xml data
+        article_dict = self._call_openai_api(prompt).find("dictionary")
+
+        # create dict attribute
+        self.dict = {}
+
+        # Process each entry and add to dict
+        for entry in article_dict.findall('entry'):
+            word = entry.find('word').text
+            pinyin = entry.find('pinyin').text
+            description = entry.find('description').text
+            # assign values
+            self.dict[word] = {'pinyin': pinyin, 'description': description}
+
+    def to_json(self):
+
+        # Extract desired attributes
+        data = {
+            "id": self.article_id,
+            "title": self.title,
+            "text": self.text,
+            "url": self.url,
+            "images": list(self.images)
+        }
+
+        # Add optional attributes if they exist
+        if self.simplified_title:
+            data["simplified_title"] = self.simplified_title
+
+        if self.simplified_text:
+            data["simplified_text"] = self.simplified_text
+        
+        if self.dict:
+            data["dict"] = list(self.dict)
+        
+        # Convert to JSON and return
+        return json.dumps(data, indent=4)
+
+    def save_to_json(self, dir):
+
+        # Create the directory if it doesn't exist
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        # Create JSON representation
+        json_data = self.to_json()
+
+        # Write to file using article ID as name
+        filepath = os.path.join(dir, f"{self.article_id}.json")
+        with open(filepath, "w") as json_file:
+            json_file.write(json_data)
