@@ -1,15 +1,14 @@
 import json
 from flask import Flask, jsonify
-from gnews import GNews
 
 app = Flask(__name__)
 
-# Sample endpoint to return news data
-@app.route('/api/news', methods=['GET'])
-def get_news():
-    google_news = GNews(country='TW', language='zh-Hant')
-    news_data = google_news.get_news('英超')
-    return jsonify(news_data)
+# Flask endpoint to serve processed articles
+@app.route('/api/articles/<article_id>', methods=['GET'])
+def get_processed_article(article_id):
+    with open(f"articles/{article_id}.json") as f:
+        article = json.load(f)
+    return jsonify(article)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
