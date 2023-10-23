@@ -5,7 +5,7 @@ const ArticleComponent = ({ articleId }) => {
 
     useEffect(() => {
         // Fetch the article data based on articleId
-        fetch(`/api/articles/${articleId}`)
+        fetch(`http://localhost:5000/api/articles/${articleId}`)
             .then(response => response.json())
             .then(data => setArticleData(data))
             .catch(error => console.error('Error fetching article:', error));
