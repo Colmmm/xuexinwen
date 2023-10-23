@@ -1,8 +1,17 @@
 version: '3'
 services:
-  react-app:
-    image: my-react-app
+  frontend:
     build:
       context: .
+    image: xue_frontend
     ports:
-      - "3000:3000"
+      - "3000:80"  # Expose local port 3000 to docker port 80 where Nginx is hosting ReactApp
+
+  backend:
+    build:
+      context: ./backend
+    image: xue_backend
+    ports:
+      - "5000:5000"  # Expose the Flask backend on port 5000
+    environment:
+      - FLASK_ENV=development  # Set the Flask environment (you can customize this)
