@@ -1,5 +1,6 @@
-gnews
 flask
+flask-cors
+gnews
 openai==0.27.0
 newspaper3k
 
