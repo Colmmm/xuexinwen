@@ -8,8 +8,7 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install
-
-# Install Axios
+RUN npm install react-router-dom
 RUN npm install axios
 
 # Copy the entire app
