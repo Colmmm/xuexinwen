@@ -13,6 +13,13 @@ def after_request(response):
     response.headers.add("Access-Control-Allow-Credentials", "true")
     return response
 
+# Flask endpoint to serve the list of article IDs
+@app.route('/api/article_ids', methods=['GET'])
+def get_article_ids():
+    with open('./articles/articles.json', 'r') as file:
+        article_ids = json.load(file)
+    return jsonify(article_ids)
+
 # Flask endpoint to serve processed articles
 @app.route('/api/articles/<article_id>', methods=['GET'])
 def get_processed_article(article_id):
