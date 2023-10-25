@@ -47,15 +47,16 @@ class XueArticle(Article):
         openai.api_key = api_key
         
         # Call OpenAI API
-        response = openai.Completion.create(
-            engine="gpt-3.5-turbo-instruct",  
-            prompt=prompt,
-            max_tokens=3000, 
-            n=1  
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Use the appropriate model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ]
         )
 
         # XML-like data outputed
-        raw_xml = "<root>" + response['choices'][0]['text'] + "</root>"
+        raw_xml = response['choices'][0]['message']['content']
 
         # Parse the XML
         parsed_xml = ET.fromstring(raw_xml) 
@@ -112,7 +113,7 @@ class XueArticle(Article):
             data["simplified_text"] = self.simplified_text
         
         if self.dict:
-            data["dict"] = list(self.dict)
+            data["dict"] = self.dict
         
         # Convert to JSON and return
         return json.dumps(data, indent=4)

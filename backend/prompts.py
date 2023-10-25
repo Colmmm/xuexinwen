@@ -6,7 +6,13 @@ def get_text_prompt(article):
     You will be provided with a news article written in Traditional Chinese (delimited with XML tags). Your task is to simplify the language in the article for learners of Traditional Chinese.
 
     1. Simplify the title and text while aiming to use the top 500 most common Traditional Chinese characters. You can use essential story-related words that are not within the top 500 characters.
-    2. **IMPORTANT: For names (people,companies,places) not natively written in Chinese, please use English versions. Do not translate names into Chinese. Names that are natively Chinese write in Chinese and put them in the dictionary**
+    2. **IMPORTANT: For names (people, groups, companies, places) please use English versions. Do not translate names into Chinese.**
+
+    Please use XML tags for your output using the following format:
+    <root>
+    <title>TITLE</title>
+    <text>TEXT</text>
+    </root>
 
     Here is the news article for simplification:
 
@@ -29,6 +35,7 @@ def get_dict_prompt(article):
 
     Use the following format:
 
+    <root>
     <dictionary>
     <entry>
         <word>WORD1</word>
@@ -42,6 +49,7 @@ def get_dict_prompt(article):
     </entry>
     <!-- Include more entries as necessary -->
     </dictionary>
+    </root>
 
     Here is the news article:
     """
