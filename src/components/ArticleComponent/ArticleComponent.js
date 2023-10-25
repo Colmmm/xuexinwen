@@ -23,7 +23,7 @@ const ArticleComponent = ({ articleId }) => {
                         <p>Simplified Text: {articleData.simplified_text}</p>
                         <div>
                             <h3>Dictionary:</h3>
-                            <pre>{JSON.stringify(articleData.dictionary, null, 2)}</pre>
+                            <pre>{JSON.stringify(articleData.dict, null, 2)}</pre>
                         </div>
                     </>
                 )}
