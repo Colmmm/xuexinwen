@@ -6,6 +6,8 @@ services:
     image: xue_frontend
     ports:
       - "3000:80"  # Expose local port 3000 to docker port 80 where Nginx is hosting ReactApp
+    volumes:
+          - .:/app 
 
   backend:
     build:
