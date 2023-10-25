@@ -1,4 +1,7 @@
-/* Navbar.css */
+. {
+   text-decoration: none; 
+}
+
 .navbar {
   background-color: #f5f5f5; /* Set a light gray background color */
   color: #333; /* Set the text color to dark gray */
