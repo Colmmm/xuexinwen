@@ -13,21 +13,35 @@ const ArticleComponent = ({ articleId }) => {
             .catch(error => console.error('Error fetching article:', error));
     }, [articleId]);
 
+    const renderDictionary = () => {
+        if (articleData && articleData.dict) {
+            return (
+                <div className="dict">
+                    <ul className="dict--list">
+                        {Object.keys(articleData.dict).map(term => (
+                            <li className="dict--item" key={term}>
+                                <strong>{term}:</strong> {articleData.dict[term].description} ({articleData.dict[term].pinyin})
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        }
+    };
+
     return (
-        <div>        
+        <div className="article-container">
             <Navbar />
-            <div>
+            <div className="article">
                 {articleData && (
                     <>
-                        <h1>{articleData.title}</h1>
-                        <p>Simplified Text: {articleData.simplified_text}</p>
-                        <div>
-                            <h3>Dictionary:</h3>
-                            <pre>{JSON.stringify(articleData.dict, null, 2)}</pre>
-                        </div>
+                        <h1 className="article--title">{articleData.title}</h1>
+                        <img className="article--img" src={articleData.images[0]}/>
+                        {renderDictionary()}
+                        <p className="article--text">{articleData.simplified_text}</p>
                     </>
                 )}
-                </div>
+            </div>
         </div>
     );
 };

@@ -1,0 +1,53 @@
+/* Center the content vertically and horizontally */
+.article-container {
+}
+
+/* Styling for the article */
+.article {
+    margin-top: 20px;
+    text-align: center; /* Center text inside the article */
+    background-color: #f7f7f7; /* Light background color */
+    padding: 20px;
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Drop shadow */
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.dict {
+    margin-top: 15px;
+    font-size: 20px;
+}
+
+
+.article--img {
+    max-width: 50%;
+    text-align:center;
+    width:100%;
+    display:block;
+    margin:auto;
+}
+
+
+/* Styling for dictionary columns */
+.dict--list {
+    column-count: 2; /* Display the dictionary in two columns */
+    column-gap: 20px; /* Adjust the gap between columns */
+}
+
+/* Styling for dictionary items */
+.dict--item {
+    list-style-type: none;
+    margin: 5px 0; /* Spacing between dictionary items */
+}
+
+.article--text {
+    max-width: 80%;
+    font-size: 25px;
+    margin-left: auto;
+    margin-right: auto;
+
+}
