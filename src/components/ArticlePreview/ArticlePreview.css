@@ -1,0 +1,28 @@
+.preview {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+  text-align: center;
+}
+
+.preview--img {
+  max-width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.preview--title {
+  font-size: 25px;
+  font-weight: bold;
+  margin: 8px 0;
+  text-decoration: none;
+  color: #333;
+}
+
+/* Add hover effect for a slight scale-up animation */
+.preview:hover {
+  transform: scale(1.1);
+}

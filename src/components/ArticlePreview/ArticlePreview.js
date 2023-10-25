@@ -13,9 +13,9 @@ const ArticlePreview = ({ articleId }) => {
   }, [articleId]);
 
   return (
-    <div className="preview">
+    <div >
       {articleData && (
-        <div>
+        <div className="preview">
           <img className="preview--img" src={articleData.images[0]}/>
           <h2 className="preview--title">{articleData.simplified_title}</h2>
         </div>
