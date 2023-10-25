@@ -1,0 +1,9 @@
+.previews-container {
+    padding-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(30%, 1fr)); /* Adjust the percentage as needed */
+    gap: 30px; /* Adjust the gap between previews */
+    width: 80%;
+    align-self: center;
+    align-items: center;
+  }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './ArticleComponent.css';
+import Navbar from '../Navbar/Navbar';
 
 const ArticleComponent = ({ articleId }) => {
     const [articleData, setArticleData] = useState(null);
@@ -13,17 +14,20 @@ const ArticleComponent = ({ articleId }) => {
     }, [articleId]);
 
     return (
-        <div>
-            {articleData && (
-                <>
-                    <h1>{articleData.title}</h1>
-                    <p>Simplified Text: {articleData.simplified_text}</p>
-                    <div>
-                        <h3>Dictionary:</h3>
-                        <pre>{JSON.stringify(articleData.dictionary, null, 2)}</pre>
-                    </div>
-                </>
-            )}
+        <div>        
+            <Navbar />
+            <div>
+                {articleData && (
+                    <>
+                        <h1>{articleData.title}</h1>
+                        <p>Simplified Text: {articleData.simplified_text}</p>
+                        <div>
+                            <h3>Dictionary:</h3>
+                            <pre>{JSON.stringify(articleData.dictionary, null, 2)}</pre>
+                        </div>
+                    </>
+                )}
+                </div>
         </div>
     );
 };
