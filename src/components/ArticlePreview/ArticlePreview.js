@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './ArticlePreview.css'; // Import the CSS file
 
 const ArticlePreview = ({ articleId }) => {
   const [articleData, setArticleData] = useState(null);
@@ -12,12 +13,11 @@ const ArticlePreview = ({ articleId }) => {
   }, [articleId]);
 
   return (
-    <div className="article-preview">
+    <div className="preview">
       {articleData && (
         <div>
-          <img src={articleData.images[0]}/>
-          <h2>{articleData.title}</h2>
-          <p>{articleData.simplified_text}</p>
+          <img className="preview--img" src={articleData.images[0]}/>
+          <h2 className="preview--title">{articleData.simplified_title}</h2>
         </div>
       )}
     </div>

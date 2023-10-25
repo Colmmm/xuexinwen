@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './ArticleComponent.css';
 
 const ArticleComponent = ({ articleId }) => {
     const [articleData, setArticleData] = useState(null);

@@ -1,3 +1,4 @@
+import './Home.css';
 import ArticlePreview from "./ArticlePreview";
 import {Link} from 'react-router-dom'; 
 
