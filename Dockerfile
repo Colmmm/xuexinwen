@@ -1,5 +1,5 @@
 # Stage 1: Build React app
-FROM node:latest AS build
+FROM node:20.9.0-alpine AS build
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve the React app using a lightweight server
-FROM nginx:alpine
+FROM nginx:mainline-alpine3.18
 
 # Copy the built React app from the previous stage
 COPY --from=build /app/build /usr/share/nginx/html
