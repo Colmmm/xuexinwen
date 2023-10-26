@@ -12,7 +12,7 @@ services:
       - CHOKIDAR_USEPOLLING=true # create-ui-app <= 5.x
       - WATCHPACK_POLLING=true # create-ui-app >= 5.x
       - FAST_REFRESH=false
-      - WDS_SOCKET_PORT=30000 
+      - WDS_SOCKET_PORT=3000
 
   backend:
     build:
@@ -21,10 +21,10 @@ services:
     ports:
       - "5000:5000"  # Expose the Flask backend on port 5000
     volumes:
-      - .:/app
+      - ./backend:/app
     environment:
       - FLASK_ENV=development  # Set the Flask environment (you can customize this)
       - CHOKIDAR_USEPOLLING=true # create-ui-app <= 5.x
       - WATCHPACK_POLLING=true # create-ui-app >= 5.x
       - FAST_REFRESH=false
-      - WDS_SOCKET_PORT=30000 
+      - WDS_SOCKET_PORT=5000
