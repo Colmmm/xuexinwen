@@ -18,7 +18,7 @@ class XueArticle(Article):
             
         if self.url:
             # Generate a unique ID based on the URL using SHA-256 hash + with "a" prefix so doesn't start with number (also slicing it so not as long)
-            self.article_id = "a" + hashlib.sha256(url.encode()).hexdigest()[:15]
+            self.article_id = "a" + hashlib.sha256(self.url.encode()).hexdigest()[:15]
             # Use url to download and parse article 
             super().__init__(self.url)
             self.download()

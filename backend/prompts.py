@@ -3,10 +3,11 @@ def get_text_prompt(article):
 
     return (
     """
-    You will be provided with a news article written in Traditional Chinese (delimited with XML tags). Your task is to simplify the language in the article for learners of Traditional Chinese.
+    You will be provided with a news article written in Traditional Chinese (delimited with XML tags). 
+    Your task is to use around a paragraph to summarize the information of the article and to simplify the language in the article for learners of Chinese.
 
     1. Simplify the title and text while aiming to use the top 500 most common Traditional Chinese characters. You can use essential story-related words that are not within the top 500 characters.
-    2. **IMPORTANT: For names (people, groups, companies, places) please use English versions. Do not translate names into Chinese.**
+    2. **IMPORTANT: For names (people, groups, companies, places) please use English versions. Apart from names please use Traditional Chinese, do not provide an English translated text**
 
     Please use XML tags for your output using the following format:
     <root>
