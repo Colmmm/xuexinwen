@@ -10,7 +10,7 @@ function App() {
 
   // Fetch article IDs when the component mounts
   useEffect(() => {
-    fetch('http://localhost:5000/api/article_ids')
+    fetch('http://xue-xinwen.com:5000/api/article_ids')
       .then((response) => response.json())
       .then((data) => setArticleIds(data));
   }, []);

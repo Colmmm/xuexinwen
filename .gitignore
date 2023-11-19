@@ -33,3 +33,7 @@ yarn-error.log*
 */__pycache__/
 */venv/
 
+
+#docker up
+nohup.out
+

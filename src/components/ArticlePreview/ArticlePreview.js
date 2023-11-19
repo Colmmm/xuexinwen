@@ -6,7 +6,7 @@ const ArticlePreview = ({ articleId }) => {
 
   useEffect(() => {
     // Fetch article data based on articleId
-    fetch(`http://localhost:5000/api/articles/${articleId}`)
+    fetch(`http://xue-xinwen.com:5000/api/articles/${articleId}`)
       .then((response) => response.json())
       .then((data) => setArticleData(data))
       .catch((error) => console.error('Error fetching article:', error));

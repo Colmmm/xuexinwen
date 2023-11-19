@@ -5,14 +5,11 @@ services:
       context: .
     image: xue_frontend
     ports:
-      - "3000:80"  # Expose local port 3000 to docker port 80 where Nginx is hosting ReactApp
+      - "80:80"  # Expose local port 3000 to docker port 80 where Nginx is hosting ReactApp
     volumes:
           - .:/app
     environment:
-      - CHOKIDAR_USEPOLLING=true # create-ui-app <= 5.x
-      - WATCHPACK_POLLING=true # create-ui-app >= 5.x
-      - FAST_REFRESH=false
-      - WDS_SOCKET_PORT=3000
+      - REACT_APP_API_URL=http://xue-xinwen.com:5000
 
   backend:
     build:
@@ -23,8 +20,4 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - FLASK_ENV=development  # Set the Flask environment (you can customize this)
-      - CHOKIDAR_USEPOLLING=true # create-ui-app <= 5.x
-      - WATCHPACK_POLLING=true # create-ui-app >= 5.x
-      - FAST_REFRESH=false
-      - WDS_SOCKET_PORT=5000
+      - FLASK_ENV=production  # Set the Flask environment

@@ -3,11 +3,11 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "http://frontend:3000"}})
+CORS(app, resources={r"/api/*": {"origins": "http://xue-xinwen.com"}})
 
 @app.after_request
 def after_request(response):
-    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
+    response.headers.add("Access-Control-Allow-Origin", "http://xue-xinwen.com")
     response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
     response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE")
     response.headers.add("Access-Control-Allow-Credentials", "true")
