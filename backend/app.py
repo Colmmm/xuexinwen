@@ -1,8 +1,10 @@
 import json
 from flask import Flask, jsonify
 from flask_cors import CORS
+from config import Config
 
 app = Flask(__name__)
+app.config.from_object(Config) #loading in config such as FLASK_ENV = "production" or "development"
 CORS(app, resources={r"/api/*": {"origins": "http://xue-xinwen.com"}})
 
 @app.after_request
