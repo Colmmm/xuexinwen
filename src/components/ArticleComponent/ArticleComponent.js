@@ -36,7 +36,7 @@ const ArticleComponent = ({ articleId }) => {
             <div className="article">
                 {articleData && (
                     <>
-                        <h1 className="article--title">{articleData.title}</h1>
+                        <h1 className="article--title">{articleData.simplified_title}</h1>
                         <img className="article--img" src={articleData.images[0]}/>
                         {renderDictionary()}
                         <p className="article--text">{articleData.simplified_text}</p>

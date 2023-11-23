@@ -29,7 +29,7 @@ def get_news_from_url(urls):
 
 def daily_news_run(articles_dir="../articles/"):
 
-    for topic in ["英超", "足球" ]:
+    for topic in ["英超", "足球", "國際", "台灣", "英國" ]:
         try:
             article = download_and_process_article(topic=topic)
         except Exception as e:
