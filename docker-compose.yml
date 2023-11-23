@@ -5,11 +5,11 @@ services:
       context: .
     image: xue_frontend
     ports:
-      - "3000:80"  # port 3000 for development and 80 for production
+      - "80:80"  # port 3000 for development and 80 for production
     volumes:
           - .:/app
     environment:
-      - PRODUCTION=false
+      - PRODUCTION=true
 
   backend:
     build:
@@ -20,7 +20,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - PRODUCTION=false
+      - PRODUCTION=true
 
   news_fetcher:
     build:
