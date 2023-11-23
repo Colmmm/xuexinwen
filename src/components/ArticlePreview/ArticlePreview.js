@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './ArticlePreview.css'; // Import the CSS file
+import config from '../../config';
 
 const ArticlePreview = ({ articleId }) => {
   const [articleData, setArticleData] = useState(null);
 
   useEffect(() => {
     // Fetch article data based on articleId
-    fetch(`http://xue-xinwen.com:5000/api/articles/${articleId}`)
+    fetch(`${config.apiUrl}/api/articles/${articleId}`)
       .then((response) => response.json())
       .then((data) => setArticleData(data))
       .catch((error) => console.error('Error fetching article:', error));

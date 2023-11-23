@@ -5,11 +5,11 @@ from config import Config
 
 app = Flask(__name__)
 app.config.from_object(Config) #loading in config such as FLASK_ENV = "production" or "development"
-CORS(app, resources={r"/api/*": {"origins": "http://xue-xinwen.com"}})
+CORS(app, resources={r"/api/*": {"origins": Config.REACT_APP_URL}})
 
 @app.after_request
 def after_request(response):
-    response.headers.add("Access-Control-Allow-Origin", "http://xue-xinwen.com")
+    response.headers.add("Access-Control-Allow-Origin", Config.REACT_APP_URL)
     response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
     response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE")
     response.headers.add("Access-Control-Allow-Credentials", "true")

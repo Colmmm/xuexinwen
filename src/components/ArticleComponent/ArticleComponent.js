@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import './ArticleComponent.css';
 import Navbar from '../Navbar/Navbar';
+import config from '../../config';
 
 const ArticleComponent = ({ articleId }) => {
     const [articleData, setArticleData] = useState(null);
 
     useEffect(() => {
         // Fetch the article data based on articleId
-        fetch(`http://xue-xinwen.com:5000/api/articles/${articleId}`)
+        fetch(`${config.apiUrl}/api/articles/${articleId}`)
             .then(response => response.json())
             .then(data => setArticleData(data))
             .catch(error => console.error('Error fetching article:', error));

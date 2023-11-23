@@ -5,11 +5,11 @@ services:
       context: .
     image: xue_frontend
     ports:
-      - "80:80"  # Expose local port 3000 to docker port 80 where Nginx is hosting ReactApp
+      - "3000:80"  # port 3000 for development and 80 for production
     volumes:
           - .:/app
     environment:
-      - REACT_APP_API_URL=http://xue-xinwen.com:5000
+      - PRODUCTION=false
 
   backend:
     build:
@@ -20,4 +20,4 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - FLASK_ENV=production  # Set the Flask environment
+      - PRODUCTION=false

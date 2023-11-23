@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams } from 'react-router-dom'; 
 import ArticleComponent from './components/ArticleComponent/ArticleComponent';
 import Home from './components/Home/Home';
+import config from './config';
 
 function App() {
   // State to store the list of article IDs
@@ -10,7 +11,7 @@ function App() {
 
   // Fetch article IDs when the component mounts
   useEffect(() => {
-    fetch('http://xue-xinwen.com:5000/api/article_ids')
+    fetch(`${config.apiUrl}/api/article_ids`)
       .then((response) => response.json())
       .then((data) => setArticleIds(data));
   }, []);
