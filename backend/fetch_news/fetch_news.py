@@ -45,7 +45,7 @@ def daily_news_run(articles_dir="../articles/"):
             except json.decoder.JSONDecodeError:
                 article_list = []  # Handle the case of an empty or invalid JSON file
             # add new articleId 
-            article_list.append(article.article_id)
+            article_list.extend(article.article_id)
             # save list
             with open(f"{articles_dir}/articles.json", 'w') as file:
                 json.dump(article_list, file, indent=4)
@@ -60,6 +60,7 @@ tw = pytz.timezone('Asia/Taipei')
 
 # Define the task to run daily at 5 am in the specified timezone
 @scheduler.scheduled_job('cron', hour=5, minute=0, second=0, timezone=tw)
+#@scheduler.scheduled_job('interval', minutes=1, timezone=tw)
 def scheduled_daily_news_run():
     current_time = datetime.now(tw)
     print(f"Running daily_news_run at {current_time}")
