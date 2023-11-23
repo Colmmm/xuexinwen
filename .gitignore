@@ -37,3 +37,4 @@ yarn-error.log*
 #docker up
 nohup.out
 
+*/*/__pycache__/

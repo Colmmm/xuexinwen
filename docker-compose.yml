@@ -21,3 +21,13 @@ services:
       - ./backend:/app
     environment:
       - PRODUCTION=false
+
+  news_fetcher:
+    build:
+      context: ./backend/fetch_news
+    image: xue_fetch_news
+    volumes:
+      - ./backend/:/app
+    environment:
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+    restart: always
