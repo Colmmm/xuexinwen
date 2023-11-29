@@ -29,7 +29,8 @@ def get_news_from_url(urls):
 
 def daily_news_run(articles_dir="../articles/"):
 
-    for topic in ["英超", "足球", "國際", "台灣", "英國" ]:
+    #for topic in ["英超", "足球", "國際", "台灣", "英國" ]:
+    for topic in ["國際"]:
         try:
             article = download_and_process_article(topic=topic)
         except Exception as e:
@@ -45,7 +46,7 @@ def daily_news_run(articles_dir="../articles/"):
             except json.decoder.JSONDecodeError:
                 article_list = []  # Handle the case of an empty or invalid JSON file
             # add new articleId 
-            article_list.extend(article.article_id)
+            article_list.insert(0, article.article_id)
             # save list
             with open(f"{articles_dir}/articles.json", 'w') as file:
                 json.dump(article_list, file, indent=4)
