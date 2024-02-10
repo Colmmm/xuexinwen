@@ -5,14 +5,14 @@ services:
       context: .
     image: xue_frontend
     ports:
-      - "80:80"  # port 3000 for development and 80 for production
+      - "3000:80"  # port 3000 for development and 80 for production
     volumes:
           - .:/app
           # Mount Nginx configuration
-          #- ./nginx.conf.development:/etc/nginx/conf.d/default.conf  # for development
-          - ./nginx.conf.production:/etc/nginx/conf.d/default.conf  # production
+          - ./nginx.conf.development:/etc/nginx/conf.d/default.conf  # for development
+          #- ./nginx.conf.production:/etc/nginx/conf.d/default.conf  # production
     environment:
-      - PRODUCTION=true # can be true or false
+      - PRODUCTION=false # can be true or false
 
   backend:
     build:
@@ -23,7 +23,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - PRODUCTION=true
+      - PRODUCTION=false
 
   news_fetcher:
     build:

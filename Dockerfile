@@ -23,5 +23,8 @@ FROM nginx:mainline-alpine3.18
 # Copy the built React app from the previous stage
 COPY --from=build /app/build /usr/share/nginx/html
 
+# Expose port 80
+EXPOSE 80
+
 # Default command to start Nginx and serve the app
 CMD ["nginx", "-g", "daemon off;"]
