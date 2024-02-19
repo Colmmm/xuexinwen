@@ -2,7 +2,7 @@
 import os
 
 class Config:
-    is_production = os.getenv('PRODUCTION', 'false').lower() == 'true'
+    is_production = os.getenv('BACKEND_PRODUCTION', 'false').lower() == 'true'
 
     if is_production:
         REACT_APP_API_URL = "http://xue-xinwen.com:5000"

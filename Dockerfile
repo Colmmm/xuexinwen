@@ -11,6 +11,9 @@ RUN npm install
 RUN npm install react-router-dom
 RUN npm install axios
 
+# set env vairable (for buildtime only)
+ENV REACT_APP_PRODUCTION=false
+
 # Copy the entire app
 COPY . .
 
