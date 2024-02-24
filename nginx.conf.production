@@ -1,0 +1,36 @@
+server {
+    listen 80;
+    server_name xue-xinwen.com;
+
+    root   /usr/share/nginx/html;
+    index  index.html index.htm;
+
+    # Use gzip compression for better performance
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_types application/javascript application/json text/css text/plain text/xml;
+
+    # Improve security by disabling certain Nginx features
+    server_tokens off;  # Don't expose Nginx version in headers
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-XSS-Protection "1; mode=block";
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Redirect server error pages to the static page /50x.html
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    # Deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    location ~ /\.ht {
+        deny  all;
+    }
+}

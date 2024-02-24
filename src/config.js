@@ -1,5 +1,5 @@
 // config.js
-const isProduction = process.env.PRODUCTION === 'true';
+const isProduction = process.env.REACT_APP_PRODUCTION === 'true';
 
 const config = {
   Url: isProduction ? 'http://xue-xinwen.com' : 'http://localhost:3000',
