@@ -29,7 +29,8 @@ def get_news_from_url(urls):
 
 def daily_news_run(articles_dir="../articles/"):
 
-    for topic in ["英超", "足球", "國際", "台灣", "英國" ]:
+    #for topic in ["英超", "足球", "國際", "台灣", "英國" ]:
+    for topic in ["國際"]:
         try:
             article = download_and_process_article(topic=topic)
         except Exception as e:
@@ -60,6 +61,7 @@ tw = pytz.timezone('Asia/Taipei')
 
 # Define the task to run daily at 5 am in the specified timezone
 @scheduler.scheduled_job('cron', hour=5, minute=0, second=0, timezone=tw)
+#@scheduler.scheduled_job('interval', minutes=1, timezone=tw)
 def scheduled_daily_news_run():
     current_time = datetime.now(tw)
     print(f"Running daily_news_run at {current_time}")
