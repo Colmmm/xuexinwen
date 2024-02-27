@@ -1,70 +1,88 @@
-# Getting Started with Create React App
+# Xue Xinwen
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![Xue Xinwen Logo](public/logo512.png)
 
-## Available Scripts
+Development of a web application named "Xue Xinwen" that fetches and displays news articles.
 
-In the project directory, you can run:
+## Technology Stack
 
-### `npm start`
+- **Frontend:** Create React App
+- **Backend:** Flask
+- **News Fetcher:** Custom script
+- **Reverse Proxy:** Nginx
+- **Containerization:** Docker
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Docker Compose Setup
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Three services: frontend, backend, and news_fetcher.
+Nginx used as a reverse proxy for serving the React app.
+Docker Compose manages builds, images, ports, volumes, and environment variables.
 
-### `npm test`
+## Nginx Configuration
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Nginx configured to handle routing and serve the React app.
+Two configurations for development and production environments.
 
-### `npm run build`
+## React App Development
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Utilizing Create React App for frontend development.
+Dockerized React app with specific environment variables for production.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Getting Started
 
-### `npm run eject`
+1. **Clone the Repository:**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+    ```bash
+    git clone https://github.com/your-username/xue-xinwen.git
+    cd xue-xinwen
+    ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. **Install Docker and Docker Compose:**
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+    ```bash
+    sudo apt install docker.io
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo apt install docker-compose
+    ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+3. **Set OPENAI API Key:**
 
-## Learn More
+    Remember to set your OPENAI API key in your bashrc or another suitable location.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+4. **Build Docker Images:**
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    Make sure to set your OPENAI API key before running the next command.
 
-### Code Splitting
+    ```bash
+    docker-compose build
+    ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+5. **Adjust Permissions:**
 
-### Analyzing the Bundle Size
+    Add your user to the docker group and adjust permissions:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+    ```bash
+    sudo usermod -aG docker $USER
+    sudo chown $USER:docker /var/run/docker.sock
+    ```
 
-### Making a Progressive Web App
+6. **Start the Application:**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+    ```bash
+    docker-compose up
+    ```
 
-### Advanced Configuration
+7. **Open in Browser:**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+    Open your browser and navigate to [http://localhost:3000](http://localhost:3000).
 
-### Deployment
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+**Note:** Ensure that the necessary environment variables are set for the application to function correctly. Regularly update the documentation with any changes or improvements made during development and deployment.
 
-### `npm run build` fails to minify
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## License
+
+This project is licensed under the [MIT License](LICENSE).
