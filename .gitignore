@@ -38,3 +38,6 @@ yarn-error.log*
 nohup.out
 
 */*/__pycache__/
+
+#misc
+backend/articles_test/
