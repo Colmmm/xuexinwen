@@ -26,6 +26,36 @@ services:
     environment:
       - BACKEND_PRODUCTION=false
 
+  mysql:
+    build: 
+      context: ./backend/database
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${XXW_MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${XXW_MYSQL_DATABASE}
+      - MYSQL_USER=${XXW_MYSQL_USER}
+      - MYSQL_PASSWORD=${XXW_MYSQL_PASSWORD}
+    volumes:
+      - ./backend/database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+      - mysql_data:/var/lib/mysql
+      - ./backend/:/app
+
+  migrate_json2mysql:
+    image: python:3.9
+    volumes:
+      - ./backend/articles_test:/app/articles_test
+      - ./backend/articles:/app/articles
+      - ./backend/database/migrate_from_json_to_sql.py:/app/migrate_from_json_to_sql.py
+      - ./backend/database/setup.sql:/app/setup.sql
+    depends_on:
+      - mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${XXW_MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${XXW_MYSQL_DATABASE}
+      - MYSQL_USER=${XXW_MYSQL_USER}
+      - MYSQL_PASSWORD=${XXW_MYSQL_PASSWORD}
+    command: ["bash", "-c", "pip install mysql-connector-python && python /app/migrate_from_json_to_sql.py"]
+
   news_fetcher:
     build:
       context: ./backend/fetch_news
@@ -35,3 +65,6 @@ services:
     environment:
       - OPENAI_API_KEY=$OPENAI_API_KEY
     restart: always
+
+volumes:
+  mysql_data:
