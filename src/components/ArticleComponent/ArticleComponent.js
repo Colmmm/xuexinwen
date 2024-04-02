@@ -15,13 +15,15 @@ const ArticleComponent = ({ articleId }) => {
     }, [articleId]);
 
     const renderDictionary = () => {
-        if (articleData && articleData.dict) {
+        if (articleData && articleData.keywords) {
+            const keywordsObj = JSON.parse(articleData.keywords);
+
             return (
                 <div className="dict">
                     <ul className="dict--list">
-                        {Object.keys(articleData.dict).map(term => (
+                        {Object.keys(keywordsObj).map(term => (
                             <li className="dict--item" key={term}>
-                                <strong>{term}:</strong> {articleData.dict[term].description} ({articleData.dict[term].pinyin})
+                                <strong>{term}:</strong> {keywordsObj[term].description} ({keywordsObj[term].pinyin})
                             </li>
                         ))}
                     </ul>
@@ -29,6 +31,7 @@ const ArticleComponent = ({ articleId }) => {
             );
         }
     };
+
 
     return (
         <div className="article-container">
