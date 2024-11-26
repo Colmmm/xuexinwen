@@ -41,3 +41,6 @@ nohup.out
 
 #misc
 backend/articles_test/
+
+# database backups
+*.sql
