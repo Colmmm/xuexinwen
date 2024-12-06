@@ -1,5 +1,0 @@
-gnews
-openai==0.27.0
-newspaper3k
-pytz
-apscheduler==3.7.0
