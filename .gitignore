@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+*.vscode
+xuexinwen.env
+backend/notebooks/
+*.sql
+backend/__pycache__/
