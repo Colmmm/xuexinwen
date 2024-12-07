@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
 from enum import Enum
@@ -10,6 +11,16 @@ from processing_articles import ArticleProcessor
 from db_manager import DatabaseManager
 
 app = FastAPI(title="News Article API")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 db = DatabaseManager()
 processor = ArticleProcessor()
 
@@ -200,3 +211,14 @@ def process_and_store_article(article: Article):
         db.add_article(processed_article)
     except Exception as e:
         print(f"Error processing article {article.article_id}: {str(e)}")
+
+# Initial fetch of articles if database is empty
+@app.on_event("startup")
+async def startup_event():
+    try:
+        articles = db.get_articles(limit=1)
+        if not articles:
+            print("Database empty, performing initial fetch...")
+            await fetch_new_articles(None)
+    except Exception as e:
+        print(f"Error during startup fetch: {str(e)}")
