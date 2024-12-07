@@ -5,52 +5,47 @@ services:
       context: .
     image: xue_frontend
     ports:
-      - "3000:80"  # port 3000:80 for development and 80:80 for production
+      - "5173:5173"  # Vite development server port
     volumes:
-          - .:/app
-          # Mount Nginx configuration
-          - ./nginx.conf.development:/etc/nginx/conf.d/default.conf  # for development
-          #- ./nginx.conf.production:/etc/nginx/conf.d/default.conf  # production
+      - .:/app
+      - /app/node_modules
     environment:
-      - REACT_APP_PRODUCTION=false # this only sets this variable for runtime env not the build env
-      # remember to change it for the build env which is defined in the frontend Dockerfile
+      - VITE_PRODUCTION=false
+    depends_on:
+      - backend
 
   backend:
     build:
       context: ./backend
     image: xue_backend
     ports:
-      - "5000:5000"  # Expose the Flask backend on port 5000
+      - "5000:5000"  # FastAPI backend port
     volumes:
       - ./backend:/app
+    env_file:
+      - xuexinwen.env
     environment:
       - BACKEND_PRODUCTION=false
-      - MYSQL_ROOT_PASSWORD=${XXW_MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${XXW_MYSQL_DATABASE}
-      - MYSQL_USER=${XXW_MYSQL_USER}
-      - MYSQL_PASSWORD=${XXW_MYSQL_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: python main.py
 
   mysql:
     image: mysql:8.0
-    environment:
-      - MYSQL_ROOT_PASSWORD=${XXW_MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${XXW_MYSQL_DATABASE}
-      - MYSQL_USER=${XXW_MYSQL_USER}
-      - MYSQL_PASSWORD=${XXW_MYSQL_PASSWORD}
+    env_file:
+      - xuexinwen.env
     volumes:
       - ./backend/database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
       - mysql_data:/var/lib/mysql
-      - ./backend/:/app
-
-  news_fetcher:
-    build:
-      context: ./backend/fetch_news
-    image: xue_fetch_news
-    volumes:
-      - ./backend/:/app
-    env_file: .env
-    command: python fetch_news.py
-    restart: "no"
+    ports:
+      - "3306:3306"  # MySQL port for development
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   mysql_data:

@@ -1,53 +1,198 @@
-/* Center the content vertically and horizontally */
 .article-container {
-}
-
-/* Styling for the article */
-.article {
-    margin-top: 20px;
-    text-align: center; /* Center text inside the article */
-    background-color: #f7f7f7; /* Light background color */
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 20px;
-    border-radius: 10px; /* Rounded corners */
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Drop shadow */
+}
+
+.article {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Header styles */
+.article--header {
+    margin-bottom: 30px;
+    text-align: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.article--title-mandarin {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-family: "Noto Sans SC", sans-serif;
+    color: #333;
+    line-height: 1.4;
+}
+
+.article--title-english {
+    font-size: 1.8em;
+    color: #666;
+    margin-bottom: 20px;
+    font-weight: normal;
+    line-height: 1.4;
+}
+
+.article--meta {
+    color: #666;
+    font-size: 0.9em;
     display: flex;
-    flex-direction: column;
-    max-width: 80%;
-    margin-left: auto;
-    margin-right: auto;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
-.dict {
-    margin-top: 15px;
-    font-size: 20px;
+/* Grade selector styles */
+.article--grade-selector {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    flex-wrap: wrap;
 }
 
-
-.article--img {
-    max-width: 50%;
-    text-align:center;
-    width:100%;
-    display:block;
-    margin:auto;
+.grade-button {
+    padding: 10px 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95em;
+    color: #495057;
 }
 
-
-/* Styling for dictionary columns */
-.dict--list {
-    column-count: 2; /* Display the dictionary in two columns */
-    column-gap: 20px; /* Adjust the gap between columns */
+.grade-button:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
 }
 
-/* Styling for dictionary items */
-.dict--item {
-    list-style-type: none;
-    margin: 5px 0; /* Spacing between dictionary items */
+.grade-button.active {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
 }
 
-.article--text {
-    max-width: 80%;
-    font-size: 25px;
-    margin-left: auto;
-    margin-right: auto;
+/* Content styles */
+.article--content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
 
+.article--text-mandarin,
+.article--text-english {
+    font-size: 1.2em;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    padding: 20px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.article--text-mandarin {
+    font-family: "Noto Sans SC", sans-serif;
+}
+
+/* Error state styles */
+.article-error {
+    text-align: center;
+    padding: 40px;
+    background: #fff3f3;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.article-error h2 {
+    color: #dc3545;
+    margin-bottom: 15px;
+}
+
+.article-error button {
+    margin-top: 20px;
+    padding: 12px 24px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+.article-error button:hover {
+    background: #0056b3;
+}
+
+/* Footer styles */
+.article--footer {
+    margin-top: 30px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.article--source-link {
+    display: inline-block;
+    padding: 10px 20px;
+    color: #007bff;
+    text-decoration: none;
+    border: 1px solid #007bff;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.article--source-link:hover {
+    background: #007bff;
+    color: white;
+}
+
+/* Loading state */
+.article--loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .article-container {
+        padding: 10px;
+    }
+
+    .article {
+        padding: 20px;
+    }
+
+    .article--title-mandarin {
+        font-size: 2em;
+    }
+
+    .article--title-english {
+        font-size: 1.5em;
+    }
+
+    .article--content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .article--grade-selector {
+        gap: 8px;
+    }
+
+    .grade-button {
+        padding: 8px 16px;
+        font-size: 0.9em;
+    }
 }

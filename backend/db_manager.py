@@ -13,9 +13,9 @@ class DatabaseManager:
         """Initialize database connection pool."""
         dbconfig = {
             "host": "mysql",  # Docker service name
-            "database": os.environ['XXW_MYSQL_DATABASE'],
-            "user": os.environ['XXW_MYSQL_USER'],
-            "password": os.environ['XXW_MYSQL_PASSWORD'],
+            "database": os.environ['MYSQL_DATABASE'],
+            "user": os.environ['MYSQL_USER'],
+            "password": os.environ['MYSQL_PASSWORD'],
             "charset": "utf8mb4",
             "use_unicode": True,
             "collation": "utf8mb4_unicode_ci"

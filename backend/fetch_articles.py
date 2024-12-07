@@ -58,7 +58,7 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
 
 # Dictionary mapping source IDs to their fetch functions
 SOURCE_FETCHERS = {
-    'nyt': fetch_nyt_articles
+    'nyt': nyt_fetch_articles
     # Add more sources here as needed, e.g.:
     # 'bbc': fetch_bbc_articles
 }

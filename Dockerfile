@@ -1,33 +1,21 @@
-# Stage 1: Build React app
-FROM node:20.9.0-alpine AS build
+FROM node:20.9.0-alpine
 
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy package files
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
-RUN npm install react-router-dom
-RUN npm install axios
 
-# set env vairable (for buildtime only)
-ENV REACT_APP_PRODUCTION=false
-
-# Copy the entire app
+# Copy the rest of the app
 COPY . .
 
-# Build the React app
-RUN npm run build
+# Set environment variable for development
+ENV VITE_PRODUCTION=false
 
-# Stage 2: Serve the React app using a lightweight server
-FROM nginx:mainline-alpine3.18
+# Expose port 5173 for Vite's development server
+EXPOSE 5173
 
-# Copy the built React app from the previous stage
-COPY --from=build /app/build /usr/share/nginx/html
-
-# Expose port 80
-EXPOSE 80
-
-# Default command to start Nginx and serve the app
-CMD ["nginx", "-g", "daemon off;"]
+# Start Vite development server with host set to 0.0.0.0
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

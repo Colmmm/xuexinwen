@@ -1,9 +1,51 @@
 .previews-container {
-    padding-top: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(30%, 1fr)); /* Adjust the percentage as needed */
-    gap: 30px; /* Adjust the gap between previews */
-    width: 80%;
-    margin-left: auto;
-    margin-right: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.preview-link {
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+  display: block;
+}
+
+/* Loading state */
+.previews-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+/* Empty state */
+.previews-empty {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+/* Error state */
+.previews-error {
+  text-align: center;
+  padding: 40px;
+  color: #dc3545;
+  background: #fff3f3;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .previews-container {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 15px;
+  }
 }
