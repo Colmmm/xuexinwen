@@ -22,6 +22,7 @@ def scrape_article_urls(home_page_url: str = "https://cn.nytimes.com/") -> List[
         List of article URLs
     """
     try:
+        print(f"\nFetching homepage: {home_page_url}")
         response = requests.get(home_page_url, headers=HEADERS, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -37,7 +38,9 @@ def scrape_article_urls(home_page_url: str = "https://cn.nytimes.com/") -> List[
                     link = f"{link}dual/"
                 full_url = f"https://cn.nytimes.com{link}"
                 article_links.append(full_url)
+                print(f"Found article URL: {full_url}")
 
+        print(f"Total articles found: {len(article_links)}")
         return article_links
 
     except requests.RequestException as e:
@@ -55,6 +58,7 @@ def scrape_article_content(article_url: str) -> Optional[Dict]:
         Dictionary containing article content or None if scraping fails
     """
     try:
+        print(f"\nScraping article: {article_url}")
         response = requests.get(article_url, headers=HEADERS, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -63,17 +67,21 @@ def scrape_article_content(article_url: str) -> Optional[Dict]:
         try:
             mandarin_title = soup.select('header h1:not([class])')[0].text.strip()
             english_title = soup.select('header h1.en-title')[0].text.strip()
-        except IndexError:
-            print(f"Error extracting titles from {article_url}")
+            print(f"Found titles - Mandarin: {mandarin_title[:30]}... English: {english_title[:30]}...")
+        except IndexError as e:
+            print(f"Error extracting titles from {article_url}: {str(e)}")
+            print("Header content:", soup.select('header'))
             return None
 
         # Extract byline
         byline = soup.find('div', class_='byline')
         authors = byline.find('address').text.strip() if byline and byline.find('address') else 'No authors found'
+        print(f"Authors: {authors}")
 
         # Extract date
         date_elem = soup.find('time', {'datetime': True})
         date = date_elem['datetime'] if date_elem else datetime.now().isoformat()
+        print(f"Date: {date}")
 
         # Extract parallel paragraphs
         english_paragraphs = []
@@ -89,9 +97,11 @@ def scrape_article_content(article_url: str) -> Optional[Dict]:
                     english_paragraphs.append(eng.text.strip())
                     mandarin_paragraphs.append(mand.text.strip())
 
+        print(f"Extracted {len(english_paragraphs)} paragraph pairs")
+
         # Only return if we have both titles and at least one paragraph pair
         if mandarin_title and english_title and english_paragraphs and mandarin_paragraphs:
-            return {
+            article_data = {
                 'url': article_url,
                 'mandarin_title': mandarin_title,
                 'english_title': english_title,
@@ -100,6 +110,10 @@ def scrape_article_content(article_url: str) -> Optional[Dict]:
                 'english_paragraphs': english_paragraphs,
                 'mandarin_paragraphs': mandarin_paragraphs
             }
+            print("Successfully created article data dictionary")
+            return article_data
+        
+        print("Missing required data, skipping article")
         return None
 
     except Exception as e:
@@ -113,13 +127,19 @@ def nyt_fetch_articles() -> List[Dict]:
     Returns:
         List of dictionaries containing article contents
     """
+    print("\nStarting NYT article fetch process...")
     article_urls = scrape_article_urls()
     articles = []
 
-    for url in article_urls:
+    for url in article_urls: 
         article_content = scrape_article_content(url)
         if article_content:
             articles.append(article_content)
+            print(f"Successfully added article to collection. Total articles: {len(articles)}")
+            break # lets process only one article for testing purposes
+        else:
+            print(f"Skipping article {url} due to missing content")
         time.sleep(12)  # Respectful delay between requests
 
+    print(f"\nFetch process complete. Total articles collected: {len(articles)}")
     return articles

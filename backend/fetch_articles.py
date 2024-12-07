@@ -20,6 +20,9 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
     Returns:
         Article: Created article instance
     """
+    print(f"\nProcessing article: {raw_data.get('url', 'No URL')}")
+    print(f"Raw data keys: {raw_data.keys()}")
+    
     # Create ArticleSection instances from parallel texts
     sections = []
     for mand, eng in zip(raw_data['mandarin_paragraphs'], raw_data['english_paragraphs']):
@@ -51,7 +54,7 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
         date=date,
         source=source,
         authors=authors,
-        mandarin_title=raw_data['chinese_title'],
+        mandarin_title=raw_data['mandarin_title'],  # Changed from chinese_title to mandarin_title
         english_title=raw_data['english_title'],
         sections=sections
     )
@@ -89,10 +92,18 @@ def fetch_articles(source: str = None) -> List[Article]:
     # Fetch from each source
     for src_id, fetcher in sources_to_fetch.items():
         try:
+            print(f"\nFetching articles from {src_id}...")
             raw_articles = fetcher()
+            print(f"Retrieved {len(raw_articles)} raw articles from {src_id}")
+            
             for raw_article in raw_articles:
-                article = create_article_from_raw(raw_article, src_id)
-                articles.append(article)
+                try:
+                    article = create_article_from_raw(raw_article, src_id)
+                    articles.append(article)
+                    print(f"Successfully processed article: {article.english_title}")
+                except Exception as e:
+                    print(f"Error processing article: {str(e)}")
+                    print(f"Raw article data: {raw_article}")
         except Exception as e:
             print(f"Error fetching from {src_id}: {str(e)}")
     
