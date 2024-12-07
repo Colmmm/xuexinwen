@@ -140,7 +140,7 @@ class ArticleProcessor:
                 headers=headers,
                 json={
                     #"model": "meta-llama/llama-3.1-70b-instruct:free",  # Using free model while testing instead of "openai/gpt-4-mini",
-                    "model": "openai/gpt-4-mini",
+                    "model": "openai/gpt-4o-mini",
                     "messages": [
                         {"role": "user", "content": prompt}
                     ]

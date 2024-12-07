@@ -129,9 +129,14 @@ async def get_graded_article(
             "english_content": "\n\n".join(s.english for s in article.sections)
         }
     else:
-        # Check if all sections have the requested level
+        # Check if any sections have the requested level
         level_upper = level.value.upper()
-        if not all(s.graded and level_upper in s.graded for s in article.sections):
+        graded_sections = [
+            s.graded[level_upper] if s.graded and level_upper in s.graded else s.mandarin
+            for s in article.sections
+        ]
+        
+        if not any(s.graded and level_upper in s.graded for s in article.sections):
             raise HTTPException(
                 status_code=404,
                 detail=f"Graded version not available for CEFR level {level_upper}"
@@ -145,7 +150,7 @@ async def get_graded_article(
             "authors": article.authors,
             "mandarin_title": article.mandarin_title,
             "english_title": article.english_title,
-            "graded_content": "\n\n".join(s.graded[level_upper] for s in article.sections),
+            "graded_content": "\n\n".join(graded_sections),
             "english_content": "\n\n".join(s.english for s in article.sections)
         }
 
