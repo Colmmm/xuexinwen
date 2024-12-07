@@ -10,17 +10,28 @@ function App() {
     ? 'http://xue-xinwen.com:5000' 
     : 'http://localhost:5000'
 
-  useEffect(() => {
+  const fetchArticles = () => {
     fetch(`${apiUrl}/api/articles`)
       .then((response) => response.json())
       .then((data) => setArticles(data))
       .catch((error) => console.error('Error fetching articles:', error))
+  }
+
+  useEffect(() => {
+    // Initial fetch
+    fetchArticles()
+
+    // Set up polling every 30 seconds
+    const interval = setInterval(fetchArticles, 30000)
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval)
   }, [])
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home articles={articles} />} />
+        <Route path="/" element={<Home articles={articles} onRefresh={fetchArticles} />} />
         <Route path="/article/:articleId/grade/:level" element={<ArticleComponent />} />
         <Route path="/article/:articleId" element={<ArticleComponent />} />
       </Routes>

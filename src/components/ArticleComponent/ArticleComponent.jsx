@@ -4,11 +4,11 @@ import Navbar from '../Navbar/Navbar'
 import './ArticleComponent.css'
 
 const GRADE_LEVELS = [
-  { value: 'native', label: '原文 (Native)' },
   { value: 'a1', label: 'A1 入门 (Beginner)' },
   { value: 'a2', label: 'A2 基础 (Elementary)' },
   { value: 'b1', label: 'B1 中级 (Intermediate)' },
-  { value: 'b2', label: 'B2 中高级 (Upper Intermediate)' }
+  { value: 'b2', label: 'B2 中高级 (Upper Intermediate)' },
+  { value: 'native', label: '原文 (Native)' }
 ]
 
 const ArticleComponent = () => {
@@ -66,7 +66,6 @@ const ArticleComponent = () => {
         <div className="article">
           <div className="article--header">
             <h1 className="article--title-mandarin">{article.mandarin_title}</h1>
-            <h2 className="article--title-english">{article.english_title}</h2>
             <div className="article--meta">
               <span className="article--date">
                 {new Date(article.date).toLocaleDateString()}
@@ -96,10 +95,7 @@ const ArticleComponent = () => {
 
           <div className="article--content">
             <div className="article--text-mandarin">
-              {level === 'native' ? article.graded_content : article.graded_content}
-            </div>
-            <div className="article--text-english">
-              {article.english_content}
+              {article.graded_content}
             </div>
           </div>
 
