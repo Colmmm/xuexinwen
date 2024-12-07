@@ -128,7 +128,7 @@ class ArticleProcessor:
         B1: [Simplified Mandarin text at B1 level with a mix of English and Chinese names]  
         B2: [Simplified Mandarin text at B2 level, closest to original complexity, using Chinese for most names]  
         Additional Emphasis:
-        Names (e.g., "John", "Microsoft", "Beijing") and proper nouns must be converted to English at the A1 and A2 levels unless they are very obvious or universally recognized. 
+        Names (e.g., "John", "Microsoft", "Munich") and proper nouns must be converted to English at the A1 and A2 levels unless they are very obvious or universally recognized. 
         Double-check the output to ensure names are correctly handled.
         """ 
         

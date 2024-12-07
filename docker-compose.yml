@@ -39,12 +39,17 @@ services:
       - mysql_data:/var/lib/mysql
     ports:
       - "3306:3306"  # MySQL port for development
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-character-set-client-handshake
+      --init-connect='SET NAMES utf8mb4'
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
 
 volumes:
   mysql_data:

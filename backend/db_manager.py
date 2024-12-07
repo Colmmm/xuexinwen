@@ -2,29 +2,85 @@ import os
 from typing import List, Optional, Dict
 from datetime import datetime
 import mysql.connector
-from mysql.connector import pooling
+from mysql.connector import Error
+import time
 
 from article import Article, ArticleSection
 
 class DatabaseManager:
     """Manages MySQL database operations for articles."""
     
-    def __init__(self):
-        """Initialize database connection pool."""
-        dbconfig = {
+    def __init__(self, max_retries=3, retry_delay=2):
+        """Initialize database connection."""
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        self.dbconfig = {
             "host": "mysql",  # Docker service name
+            "port": 3306,     # MySQL port
             "database": os.environ['MYSQL_DATABASE'],
             "user": os.environ['MYSQL_USER'],
             "password": os.environ['MYSQL_PASSWORD'],
             "charset": "utf8mb4",
             "use_unicode": True,
-            "collation": "utf8mb4_unicode_ci"
+            "collation": "utf8mb4_unicode_ci",
+            "connect_timeout": 30,  # Increase connection timeout
+            "raise_on_warnings": True,
+            "allow_local_infile": True
         }
-        self.pool = mysql.connector.pooling.MySQLConnectionPool(
-            pool_name="article_pool",
-            pool_size=5,
-            **dbconfig
-        )
+        self._test_connection()
+    
+    def _test_connection(self):
+        """Test the database connection."""
+        print(f"Attempting to connect to MySQL at {self.dbconfig['host']}:{self.dbconfig['port']}")
+        print(f"Database: {self.dbconfig['database']}")
+        print(f"User: {self.dbconfig['user']}")
+        
+        conn = mysql.connector.connect(**self.dbconfig)
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT VERSION()")
+            version = cursor.fetchone()
+            print(f"Connected to MySQL version: {version[0]}")
+            
+            # Set character set
+            cursor.execute("SET NAMES utf8mb4")
+            conn.commit()
+            cursor.execute("SET CHARACTER SET utf8mb4")
+            conn.commit()
+            cursor.execute("SET character_set_connection=utf8mb4")
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+    
+    def _get_connection(self):
+        """Get a new database connection with retries."""
+        retries = 0
+        last_error = None
+        
+        while retries < self.max_retries:
+            try:
+                conn = mysql.connector.connect(**self.dbconfig)
+                cursor = conn.cursor(dictionary=True)
+                
+                # Set character set for each connection
+                cursor.execute("SET NAMES utf8mb4")
+                conn.commit()
+                cursor.execute("SET CHARACTER SET utf8mb4")
+                conn.commit()
+                cursor.execute("SET character_set_connection=utf8mb4")
+                conn.commit()
+                
+                return conn, cursor
+            except Error as e:
+                last_error = e
+                retries += 1
+                if retries == self.max_retries:
+                    print(f"Final connection error: {str(e)}")
+                    raise Exception(f"Failed to connect to MySQL after {self.max_retries} attempts: {str(e)}")
+                print(f"Failed to get MySQL connection (attempt {retries}/{self.max_retries}). Error: {str(e)}")
+                print(f"Retrying in {self.retry_delay} seconds...")
+                time.sleep(self.retry_delay)
     
     def add_article(self, article: Article) -> None:
         """
@@ -33,14 +89,18 @@ class DatabaseManager:
         Args:
             article: Article to add
         """
-        conn = self.pool.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        print(f"\nAttempting to add article {article.article_id} to database")
+        conn = None
+        cursor = None
         
         try:
+            conn, cursor = self._get_connection()
+            
             # Start transaction
             conn.start_transaction()
             
             # Insert main article data
+            print("Inserting article data...")
             cursor.execute("""
                 INSERT INTO articles (
                     article_id, url, date, source,
@@ -48,12 +108,13 @@ class DatabaseManager:
                 ) VALUES (
                     %(article_id)s, %(url)s, %(date)s, %(source)s,
                     %(mandarin_title)s, %(english_title)s
-                ) ON DUPLICATE KEY UPDATE
-                    url=VALUES(url),
-                    date=VALUES(date),
-                    source=VALUES(source),
-                    mandarin_title=VALUES(mandarin_title),
-                    english_title=VALUES(english_title)
+                ) AS new_article
+                ON DUPLICATE KEY UPDATE
+                    url=new_article.url,
+                    date=new_article.date,
+                    source=new_article.source,
+                    mandarin_title=new_article.mandarin_title,
+                    english_title=new_article.english_title
             """, {
                 'article_id': article.article_id,
                 'url': article.url,
@@ -62,23 +123,30 @@ class DatabaseManager:
                 'mandarin_title': article.mandarin_title,
                 'english_title': article.english_title
             })
+            conn.commit()
             
             # Clear existing authors and insert new ones
+            print("Updating authors...")
             cursor.execute("""
                 DELETE FROM authors WHERE article_id = %s
             """, (article.article_id,))
+            conn.commit()
             
             if article.authors:
-                cursor.executemany("""
-                    INSERT INTO authors (article_id, author)
-                    VALUES (%s, %s)
-                """, [(article.article_id, author) for author in article.authors])
+                for author in article.authors:
+                    cursor.execute("""
+                        INSERT INTO authors (article_id, author)
+                        VALUES (%s, %s)
+                    """, (article.article_id, author))
+                conn.commit()
             
             # Clear existing sections and graded versions
+            print("Updating sections...")
             cursor.execute("""
                 DELETE s FROM sections s
                 WHERE s.article_id = %s
             """, (article.article_id,))
+            conn.commit()
             
             # Insert new sections with their graded versions
             for position, section in enumerate(article.sections):
@@ -95,28 +163,31 @@ class DatabaseManager:
                     'english': section.english
                 })
                 section_id = cursor.lastrowid
+                conn.commit()
                 
                 # Insert graded versions if they exist
                 if section.graded:
-                    cursor.executemany("""
-                        INSERT INTO graded_sections (
-                            section_id, cefr_level, content
-                        ) VALUES (%s, %s, %s)
-                    """, [
-                        (section_id, level, content)
-                        for level, content in section.graded.items()
-                    ])
+                    for level, content in section.graded.items():
+                        cursor.execute("""
+                            INSERT INTO graded_sections (
+                                section_id, cefr_level, content
+                            ) VALUES (%s, %s, %s)
+                        """, (section_id, level, content))
+                        conn.commit()
             
-            # Commit transaction
-            conn.commit()
+            print(f"Successfully saved article {article.article_id} to database")
             
-        except Exception as e:
-            conn.rollback()
+        except Error as e:
+            if conn:
+                conn.rollback()
+            print(f"Error saving article to database: {str(e)}")
             raise e
             
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
     
     def get_article(self, article_id: str) -> Optional[Article]:
         """
@@ -128,10 +199,12 @@ class DatabaseManager:
         Returns:
             Article if found, None otherwise
         """
-        conn = self.pool.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn = None
+        cursor = None
         
         try:
+            conn, cursor = self._get_connection()
+            
             # Get main article data
             cursor.execute("""
                 SELECT * FROM articles WHERE article_id = %s
@@ -198,8 +271,10 @@ class DatabaseManager:
             )
             
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
     
     def get_articles(self, 
                     source: Optional[str] = None,
@@ -216,10 +291,12 @@ class DatabaseManager:
         Returns:
             List of articles matching criteria
         """
-        conn = self.pool.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn = None
+        cursor = None
         
         try:
+            conn, cursor = self._get_connection()
+            
             # Build query based on filters
             query = "SELECT article_id FROM articles"
             params = []
@@ -242,5 +319,7 @@ class DatabaseManager:
             ]
             
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
