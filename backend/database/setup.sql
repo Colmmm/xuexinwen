@@ -14,6 +14,7 @@ CREATE TABLE articles (
     mandarin_title TEXT NOT NULL,
     english_title TEXT NOT NULL,
     metadata JSON,
+    processed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -52,3 +53,4 @@ CREATE TABLE graded_sections (
 -- Create indexes
 CREATE INDEX idx_articles_date ON articles(date);
 CREATE INDEX idx_articles_source ON articles(source);
+CREATE INDEX idx_articles_processed ON articles(processed);

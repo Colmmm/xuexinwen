@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
@@ -93,13 +93,65 @@ class DatabaseManager:
                 print(f"Failed to get MySQL connection (attempt {retries}/{self.max_retries}). Error: {str(e)}")
                 print(f"Retrying in {self.retry_delay} seconds...")
                 time.sleep(self.retry_delay)
+
+    def check_article_status(self, article_id: str) -> Tuple[bool, bool]:
+        """
+        Check if an article exists and has been processed.
+        
+        Args:
+            article_id: ID of the article to check
+            
+        Returns:
+            Tuple[bool, bool]: (exists, processed)
+        """
+        conn = None
+        cursor = None
+        
+        try:
+            conn, cursor = self._get_connection()
+            cursor.execute("""
+                SELECT 
+                    (SELECT COUNT(*) FROM articles WHERE article_id = %s) > 0 as article_exists,
+                    (SELECT COUNT(*) FROM articles WHERE article_id = %s AND processed = TRUE) > 0 as is_processed
+            """, (article_id, article_id))
+            result = cursor.fetchone()
+            return bool(result['article_exists']), bool(result['is_processed'])
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def mark_article_processed(self, article_id: str) -> None:
+        """
+        Mark an article as processed.
+        
+        Args:
+            article_id: ID of the article to mark as processed
+        """
+        conn = None
+        cursor = None
+        
+        try:
+            conn, cursor = self._get_connection()
+            cursor.execute("""
+                UPDATE articles SET processed = TRUE
+                WHERE article_id = %s
+            """, (article_id,))
+            conn.commit()
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
     
-    def add_article(self, article: Article) -> None:
+    def add_article(self, article: Article, processed: bool = False) -> None:
         """
         Add a new article to the database.
         
         Args:
             article: Article to add
+            processed: Whether the article has been processed
         """
         print(f"\nAttempting to add article {article.article_id} to database")
         conn = None
@@ -116,10 +168,10 @@ class DatabaseManager:
             cursor.execute("""
                 INSERT INTO articles (
                     article_id, url, date, source,
-                    mandarin_title, english_title, image_url, metadata
+                    mandarin_title, english_title, image_url, metadata, processed
                 ) VALUES (
                     %(article_id)s, %(url)s, %(date)s, %(source)s,
-                    %(mandarin_title)s, %(english_title)s, %(image_url)s, %(metadata)s
+                    %(mandarin_title)s, %(english_title)s, %(image_url)s, %(metadata)s, %(processed)s
                 ) AS new_article
                 ON DUPLICATE KEY UPDATE
                     url=new_article.url,
@@ -128,7 +180,8 @@ class DatabaseManager:
                     mandarin_title=new_article.mandarin_title,
                     english_title=new_article.english_title,
                     image_url=new_article.image_url,
-                    metadata=new_article.metadata
+                    metadata=new_article.metadata,
+                    processed=new_article.processed
             """, {
                 'article_id': article.article_id,
                 'url': article.url,
@@ -137,7 +190,8 @@ class DatabaseManager:
                 'mandarin_title': article.mandarin_title,
                 'english_title': article.english_title,
                 'image_url': article.image_url,
-                'metadata': json.dumps(article.metadata) if article.metadata else None
+                'metadata': json.dumps(article.metadata) if article.metadata else None,
+                'processed': processed
             })
             conn.commit()
             

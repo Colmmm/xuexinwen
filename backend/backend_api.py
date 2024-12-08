@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 
 from article import Article
-from fetch_articles import fetch_articles
+from fetch_articles import fetch_articles, generate_article_id
 from processing_articles import ArticleProcessor
 from db_manager import DatabaseManager
 
@@ -173,19 +173,39 @@ async def fetch_new_articles(
     """
     try:
         # Fetch articles
-        articles = fetch_articles(source)
+        raw_articles = fetch_articles(source)
         
-        if not articles:
+        if not raw_articles:
             return {
                 "message": "No new articles found to process"
             }
         
-        # Queue background processing for each article
-        for article in articles:
+        # Filter out already processed articles
+        new_articles = []
+        for article in raw_articles:
+            exists, processed = db.check_article_status(article.article_id)
+            
+            if not exists:
+                # Add to database unprocessed
+                db.add_article(article, processed=False)
+                new_articles.append(article)
+            elif not processed:
+                # Get existing unprocessed article
+                stored_article = db.get_article(article.article_id)
+                if stored_article:
+                    new_articles.append(stored_article)
+        
+        if not new_articles:
+            return {
+                "message": "No new articles to process"
+            }
+        
+        # Queue background processing for new/unprocessed articles
+        for article in new_articles:
             background_tasks.add_task(process_and_store_article, article)
         
         return {
-            "message": f"Started fetching and processing {len(articles)} articles"
+            "message": f"Started processing {len(new_articles)} articles"
         }
     except Exception as e:
         raise HTTPException(
@@ -202,13 +222,14 @@ async def reprocess_article(
     Reprocess an existing article to generate new graded versions.
     Processing happens in the background.
     """
-    article = db.get_article(article_id)
-    if not article:
+    exists, processed = db.check_article_status(article_id)
+    if not exists:
         raise HTTPException(
             status_code=404,
             detail="Article not found"
         )
     
+    article = db.get_article(article_id)
     background_tasks.add_task(process_and_store_article, article)
     
     return {
@@ -220,8 +241,8 @@ def process_and_store_article(article: Article):
     try:
         # Generate graded versions
         processed_article = processor.process_article(article)
-        # Store in database
-        db.add_article(processed_article)
+        # Store in database and mark as processed
+        db.add_article(processed_article, processed=True)
     except Exception as e:
         print(f"Error processing article {article.article_id}: {str(e)}")
 
