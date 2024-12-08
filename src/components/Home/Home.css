@@ -19,6 +19,7 @@
   text-align: center;
   padding: 40px;
   color: #666;
+  font-family: 'Dela Gothic One', cursive;
 }
 
 /* Empty state */
@@ -29,16 +30,18 @@
   background: #f8f9fa;
   border-radius: 8px;
   margin: 20px;
+  font-family: 'Dela Gothic One', cursive;
 }
 
 /* Error state */
 .previews-error {
   text-align: center;
   padding: 40px;
-  color: #dc3545;
+  color: var(--xxw-red);
   background: #fff3f3;
   border-radius: 8px;
   margin: 20px;
+  font-family: 'Dela Gothic One', cursive;
 }
 
 /* Responsive adjustments */

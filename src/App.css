@@ -5,6 +5,12 @@
   flex-direction: column;
 }
 
+:root {
+  --xxw-green: #0c704e;
+  --xxw-orange: #fb8d00;
+  --xxw-red: #f24407;
+}
+
 .app-container {
   flex: 1;
   display: flex;
@@ -26,41 +32,4 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-/* Error message */
-.error-message {
-  color: #dc3545;
-  text-align: center;
-  padding: 20px;
-  margin: 20px;
-  background: #fff3f3;
-  border-radius: 8px;
-}
-
-/* Utility classes */
-.text-center {
-  text-align: center;
-}
-
-.mt-20 {
-  margin-top: 20px;
-}
-
-.mb-20 {
-  margin-bottom: 20px;
-}
-
-/* Responsive container */
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-@media (max-width: 768px) {
-  .container {
-    padding: 0 10px;
-  }
 }

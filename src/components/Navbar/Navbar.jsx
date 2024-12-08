@@ -6,7 +6,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="navbar--container">
         <Link to="/" className="navbar--brand">
-          学新闻 <span className="navbar--brand-en">Xue Xinwen</span>
+          <img src="/XXW_Banner.png" alt="Xue Xinwen" className="navbar--logo" />
         </Link>
         <div className="navbar--description">
           Learn Chinese through News

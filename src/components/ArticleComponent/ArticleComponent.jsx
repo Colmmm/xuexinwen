@@ -4,9 +4,9 @@ import Navbar from '../Navbar/Navbar'
 import './ArticleComponent.css'
 
 const GRADE_LEVELS = [
-  { value: 'BEGINNER', label: '入门 (Beginner)' },
-  { value: 'INTERMEDIATE', label: '中级 (Intermediate)' },
-  { value: 'native', label: '高級/原文 (Advanced/Original)' }
+  { value: 'BEGINNER', label: { cn: '入门', en: 'Beginner' } },
+  { value: 'INTERMEDIATE', label: { cn: '中级', en: 'Intermediate' } },
+  { value: 'native', label: { cn: '高級/原文', en: 'Advanced/Original' } }
 ]
 
 const ArticleComponent = () => {
@@ -51,7 +51,8 @@ const ArticleComponent = () => {
             <h2>Oops!</h2>
             <p>{error}</p>
             <button onClick={() => handleGradeChange('native')}>
-              返回原文 (Return to Original Version)
+              <span className="chinese-text">返回原文</span>{' '}
+              <span className="english-text">(Return to Original Version)</span>
             </button>
           </div>
         </div>
@@ -96,10 +97,12 @@ const ArticleComponent = () => {
               {GRADE_LEVELS.map(({ value, label }) => (
                 <button
                   key={value}
+                  value={value}
                   onClick={() => handleGradeChange(value)}
                   className={`grade-button ${level === value ? 'active' : ''}`}
                 >
-                  {label}
+                  <span className="chinese-text">{label.cn}</span>{' '}
+                  <span className="english-text">({label.en})</span>
                 </button>
               ))}
             </div>
@@ -117,7 +120,8 @@ const ArticleComponent = () => {
                 rel="noopener noreferrer"
                 className="article--source-link"
               >
-                查看原文 (View Original Article)
+                <span className="chinese-text">查看原文</span>{' '}
+                <span className="english-text">(View Original Article)</span>
               </a>
             </div>
           </div>

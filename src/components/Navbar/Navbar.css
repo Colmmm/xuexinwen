@@ -5,6 +5,7 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+  font-family: 'Dela Gothic One', cursive;
 }
 
 .navbar--container {
@@ -17,24 +18,26 @@
 }
 
 .navbar--brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #333;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.navbar--brand-en {
-  font-size: 1rem;
-  color: #666;
-  font-weight: normal;
+.navbar--logo {
+  height: 50px;
+  width: auto;
 }
 
 .navbar--description {
   color: #666;
   font-size: 0.9rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+/* Apply Noto Sans SC to any Chinese text that might appear */
+[lang="zh-CN"] {
+  font-family: 'Noto Sans SC', sans-serif;
 }
 
 @media (max-width: 768px) {
@@ -44,8 +47,18 @@
     text-align: center;
   }
 
-  .navbar--brand {
-    flex-direction: column;
-    gap: 0.25rem;
+  .navbar--logo {
+    height: 45px;  /* Increased from 35px */
+  }
+
+  .navbar--description {
+    font-size: 0.8rem;
+  }
+}
+
+/* Additional media query for even smaller screens */
+@media (max-width: 480px) {
+  .navbar--logo {
+    height: 55px;  /* Even bigger on phone-sized screens */
   }
 }

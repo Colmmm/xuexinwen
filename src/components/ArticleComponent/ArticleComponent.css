@@ -1,5 +1,5 @@
 .article-container {
-    max-width: 1000px;  /* Increased from 800px */
+    max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -34,6 +34,7 @@
     justify-content: center;
     flex-wrap: wrap;
     gap: 20px;
+    font-family: 'Dela Gothic One', cursive;
 }
 
 /* Image styles */
@@ -66,24 +67,59 @@
 
 .grade-button {
     padding: 10px 20px;
-    border: 1px solid #dee2e6;
     border-radius: 6px;
-    background: white;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.95em;
-    color: #495057;
+    color: #333;
+    background: white;
+    border: 1px solid #dee2e6;
 }
 
-.grade-button:hover {
-    background: #e9ecef;
-    border-color: #ced4da;
+/* Split the button text into Chinese and English spans */
+.grade-button .chinese-text {
+    font-family: "Noto Sans SC", sans-serif;
 }
 
-.grade-button.active {
-    background: #007bff;
+.grade-button .english-text {
+    font-family: 'Dela Gothic One', cursive;
+}
+
+/* Brand color states for grade buttons */
+.grade-button[value="BEGINNER"]:hover {
+    background: var(--xxw-green);
+    border-color: var(--xxw-green);
     color: white;
-    border-color: #0056b3;
+}
+
+.grade-button[value="BEGINNER"].active {
+    border-color: var(--xxw-green);
+    color: var(--xxw-green);
+    background: white;
+}
+
+.grade-button[value="INTERMEDIATE"]:hover {
+    background: var(--xxw-orange);
+    border-color: var(--xxw-orange);
+    color: white;
+}
+
+.grade-button[value="INTERMEDIATE"].active {
+    border-color: var(--xxw-orange);
+    color: var(--xxw-orange);
+    background: white;
+}
+
+.grade-button[value="native"]:hover {
+    background: var(--xxw-red);
+    border-color: var(--xxw-red);
+    color: white;
+}
+
+.grade-button[value="native"].active {
+    border-color: var(--xxw-red);
+    color: var(--xxw-red);
+    background: white;
 }
 
 /* Content styles */
@@ -92,14 +128,14 @@
     padding: 20px;
     background: #f8f9fa;
     border-radius: 8px;
-    max-width: 850px;  /* Increased from 650px */
+    max-width: 850px;
 }
 
 .article--text-mandarin {
     font-size: 1.4em;
     line-height: 2;
     white-space: pre-wrap;
-    padding: 40px;  /* Increased padding */
+    padding: 40px;
     background: white;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -116,24 +152,26 @@
 }
 
 .article-error h2 {
-    color: #dc3545;
+    color: var(--xxw-red);
     margin-bottom: 15px;
+    font-family: 'Dela Gothic One', cursive;
 }
 
 .article-error button {
     margin-top: 20px;
     padding: 12px 24px;
-    background: #007bff;
+    background: var(--xxw-red);
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 1em;
     transition: background-color 0.2s;
+    font-family: 'Dela Gothic One', cursive;
 }
 
 .article-error button:hover {
-    background: #0056b3;
+    opacity: 0.9;
 }
 
 /* Footer styles */
@@ -147,16 +185,24 @@
 .article--source-link {
     display: inline-block;
     padding: 10px 20px;
-    color: #007bff;
+    color: #333;
     text-decoration: none;
-    border: 1px solid #007bff;
+    border: 1px solid #333;
     border-radius: 6px;
     transition: all 0.2s;
 }
 
 .article--source-link:hover {
-    background: #007bff;
+    background: #333;
     color: white;
+}
+
+.article--source-link .chinese-text {
+    font-family: "Noto Sans SC", sans-serif;
+}
+
+.article--source-link .english-text {
+    font-family: 'Dela Gothic One', cursive;
 }
 
 /* Loading state */
@@ -164,6 +210,7 @@
     text-align: center;
     padding: 40px;
     color: #666;
+    font-family: 'Dela Gothic One', cursive;
 }
 
 /* Responsive adjustments */

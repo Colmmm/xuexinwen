@@ -53,6 +53,7 @@
     margin: 0;
     font-weight: normal;
     line-height: 1.4;
+    font-family: 'Dela Gothic One', cursive;
 }
 
 .preview--meta {
@@ -64,6 +65,7 @@
     margin-top: auto;
     padding-top: 15px;
     border-top: 1px solid #eee;
+    font-family: 'Dela Gothic One', cursive;
 }
 
 .preview--date {
@@ -73,7 +75,7 @@
 .preview--source {
     text-transform: uppercase;
     font-weight: 600;
-    color: #007bff;
+    color: var(--xxw-green);
     font-size: 0.85em;
     letter-spacing: 0.5px;
 }
