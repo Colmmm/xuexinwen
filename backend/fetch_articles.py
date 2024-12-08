@@ -54,9 +54,10 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
         date=date,
         source=source,
         authors=authors,
-        mandarin_title=raw_data['mandarin_title'],  # Changed from chinese_title to mandarin_title
+        mandarin_title=raw_data['mandarin_title'],
         english_title=raw_data['english_title'],
-        sections=sections
+        sections=sections,
+        image_url=raw_data.get('image_url')
     )
 
 # Dictionary mapping source IDs to their fetch functions

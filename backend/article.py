@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List, Dict, Optional
+from datetime import datetime
 
 @dataclass
 class ArticleSection:
@@ -46,11 +46,10 @@ class Article:
     date: datetime
     source: str
     authors: List[str]
-    
     mandarin_title: str
     english_title: str
-    
     sections: List[ArticleSection]
+    image_url: Optional[str]
     metadata: Dict = None
     
     @property
@@ -80,6 +79,7 @@ class Article:
             'authors': self.authors,
             'mandarin_title': self.mandarin_title,
             'english_title': self.english_title,
+            'image_url': self.image_url,
             'sections': [
                 {
                     'mandarin': section.mandarin,
@@ -112,5 +112,6 @@ class Article:
             mandarin_title=data['mandarin_title'],
             english_title=data['english_title'],
             sections=sections,
+            image_url=data.get('image_url'),
             metadata=data.get('metadata')
         )

@@ -4,13 +4,14 @@ from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 import time
+import json
 
 from article import Article, ArticleSection
 
 class DatabaseManager:
     """Manages MySQL database operations for articles."""
     
-    def __init__(self, max_retries=3, retry_delay=2):
+    def __init__(self, max_retries=5, retry_delay=5):
         """Initialize database connection."""
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -23,7 +24,7 @@ class DatabaseManager:
             "charset": "utf8mb4",
             "use_unicode": True,
             "collation": "utf8mb4_unicode_ci",
-            "connect_timeout": 30,  # Increase connection timeout
+            "connect_timeout": 60,  # Increased connection timeout
             "raise_on_warnings": True,
             "allow_local_infile": True
         }
@@ -35,23 +36,34 @@ class DatabaseManager:
         print(f"Database: {self.dbconfig['database']}")
         print(f"User: {self.dbconfig['user']}")
         
-        conn = mysql.connector.connect(**self.dbconfig)
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT VERSION()")
-            version = cursor.fetchone()
-            print(f"Connected to MySQL version: {version[0]}")
-            
-            # Set character set
-            cursor.execute("SET NAMES utf8mb4")
-            conn.commit()
-            cursor.execute("SET CHARACTER SET utf8mb4")
-            conn.commit()
-            cursor.execute("SET character_set_connection=utf8mb4")
-            conn.commit()
-        finally:
-            cursor.close()
-            conn.close()
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                conn = mysql.connector.connect(**self.dbconfig)
+                cursor = conn.cursor()
+                cursor.execute("SELECT VERSION()")
+                version = cursor.fetchone()
+                print(f"Connected to MySQL version: {version[0]}")
+                
+                # Set character set
+                cursor.execute("SET NAMES utf8mb4")
+                conn.commit()
+                cursor.execute("SET CHARACTER SET utf8mb4")
+                conn.commit()
+                cursor.execute("SET character_set_connection=utf8mb4")
+                conn.commit()
+                
+                cursor.close()
+                conn.close()
+                return
+            except Error as e:
+                retries += 1
+                print(f"Connection attempt {retries} failed: {str(e)}")
+                if retries < self.max_retries:
+                    print(f"Retrying in {self.retry_delay} seconds...")
+                    time.sleep(self.retry_delay)
+                else:
+                    raise Exception(f"Failed to connect after {self.max_retries} attempts")
     
     def _get_connection(self):
         """Get a new database connection with retries."""
@@ -104,24 +116,28 @@ class DatabaseManager:
             cursor.execute("""
                 INSERT INTO articles (
                     article_id, url, date, source,
-                    mandarin_title, english_title
+                    mandarin_title, english_title, image_url, metadata
                 ) VALUES (
                     %(article_id)s, %(url)s, %(date)s, %(source)s,
-                    %(mandarin_title)s, %(english_title)s
+                    %(mandarin_title)s, %(english_title)s, %(image_url)s, %(metadata)s
                 ) AS new_article
                 ON DUPLICATE KEY UPDATE
                     url=new_article.url,
                     date=new_article.date,
                     source=new_article.source,
                     mandarin_title=new_article.mandarin_title,
-                    english_title=new_article.english_title
+                    english_title=new_article.english_title,
+                    image_url=new_article.image_url,
+                    metadata=new_article.metadata
             """, {
                 'article_id': article.article_id,
                 'url': article.url,
                 'date': article.date,
                 'source': article.source,
                 'mandarin_title': article.mandarin_title,
-                'english_title': article.english_title
+                'english_title': article.english_title,
+                'image_url': article.image_url,
+                'metadata': json.dumps(article.metadata) if article.metadata else None
             })
             conn.commit()
             
@@ -258,6 +274,9 @@ class DatabaseManager:
                     graded=current_graded if current_graded else None
                 ))
             
+            # Parse metadata from JSON if it exists
+            metadata = json.loads(article_data['metadata']) if article_data['metadata'] else None
+            
             # Create and return Article instance
             return Article(
                 article_id=article_data['article_id'],
@@ -267,7 +286,9 @@ class DatabaseManager:
                 authors=authors,
                 mandarin_title=article_data['mandarin_title'],
                 english_title=article_data['english_title'],
-                sections=sections
+                sections=sections,
+                image_url=article_data['image_url'],
+                metadata=metadata
             )
             
         finally:

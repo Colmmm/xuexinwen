@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -36,7 +36,7 @@ class GradeLevel(str, Enum):
 class ArticleSection(BaseModel):
     mandarin: str
     english: str
-    graded: Optional[dict] = None
+    graded: Optional[Dict[str, str]] = None
     
     class Config:
         from_attributes = True
@@ -50,6 +50,8 @@ class ArticleResponse(BaseModel):
     mandarin_title: str
     english_title: str
     sections: List[ArticleSection]
+    image_url: Optional[str] = None
+    metadata: Optional[Dict] = None
     
     class Config:
         from_attributes = True
@@ -64,6 +66,8 @@ class GradedArticleResponse(BaseModel):
     english_title: str
     graded_content: str
     english_content: str
+    image_url: Optional[str] = None
+    metadata: Optional[Dict] = None
 
 @app.get("/api/articles/", response_model=List[ArticleResponse])
 async def get_articles(
@@ -126,7 +130,9 @@ async def get_graded_article(
             "mandarin_title": article.mandarin_title,
             "english_title": article.english_title,
             "graded_content": "\n\n".join(s.mandarin for s in article.sections),
-            "english_content": "\n\n".join(s.english for s in article.sections)
+            "english_content": "\n\n".join(s.english for s in article.sections),
+            "image_url": article.image_url,
+            "metadata": article.metadata
         }
     else:
         # Check if any sections have the requested level
@@ -151,7 +157,9 @@ async def get_graded_article(
             "mandarin_title": article.mandarin_title,
             "english_title": article.english_title,
             "graded_content": "\n\n".join(graded_sections),
-            "english_content": "\n\n".join(s.english for s in article.sections)
+            "english_content": "\n\n".join(s.english for s in article.sections),
+            "image_url": article.image_url,
+            "metadata": article.metadata
         }
 
 @app.post("/api/articles/fetch")

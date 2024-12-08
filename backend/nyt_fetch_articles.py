@@ -63,6 +63,20 @@ def scrape_article_content(article_url: str) -> Optional[Dict]:
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
+        # Extract image URL
+        image_url = None
+        figure = soup.find('figure', class_='article-span-photo')
+        if figure:
+            img_tag = figure.find('img')
+            if img_tag and img_tag.get('src'):
+                image_url = img_tag['src']
+                print(f"Found image URL: {image_url}")
+        
+        # Skip articles without images
+        if not image_url:
+            print("No image found, skipping article")
+            return None
+
         # Extract titles
         try:
             mandarin_title = soup.select('header h1:not([class])')[0].text.strip()
@@ -108,7 +122,8 @@ def scrape_article_content(article_url: str) -> Optional[Dict]:
                 'authors': authors,
                 'date': date,
                 'english_paragraphs': english_paragraphs,
-                'mandarin_paragraphs': mandarin_paragraphs
+                'mandarin_paragraphs': mandarin_paragraphs,
+                'image_url': image_url
             }
             print("Successfully created article data dictionary")
             return article_data
@@ -131,14 +146,14 @@ def nyt_fetch_articles() -> List[Dict]:
     article_urls = scrape_article_urls()
     articles = []
 
-    for url in article_urls: 
+    for url in article_urls[1:]: 
         article_content = scrape_article_content(url)
         if article_content:
             articles.append(article_content)
             print(f"Successfully added article to collection. Total articles: {len(articles)}")
-            break # lets process only one article for testing purposes
         else:
-            print(f"Skipping article {url} due to missing content")
+            print(f"Skipping article {url} due to missing content") 
+        break # lets process only one article for testing purposes
         time.sleep(12)  # Respectful delay between requests
 
     print(f"\nFetch process complete. Total articles collected: {len(articles)}")
