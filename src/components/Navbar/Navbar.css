@@ -48,7 +48,7 @@
   }
 
   .navbar--logo {
-    height: 45px;  /* Increased from 35px */
+    height: 65px;  /* Increased from 35px */
   }
 
   .navbar--description {
@@ -59,6 +59,6 @@
 /* Additional media query for even smaller screens */
 @media (max-width: 480px) {
   .navbar--logo {
-    height: 55px;  /* Even bigger on phone-sized screens */
+    height: 65px;  /* Even bigger on phone-sized screens */
   }
 }
