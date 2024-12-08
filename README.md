@@ -1,6 +1,6 @@
 # Xue Xinwen
 
-![Xue Xinwen Logo](public/logo512.png)
+![Xue Xinwen Logo](public/XXW_Banner.png)
 
 Development of a web application named "Xue Xinwen" that fetches and displays news articles.
 
