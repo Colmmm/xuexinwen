@@ -10,14 +10,16 @@ class ArticleSection:
     Attributes:
         mandarin: Original text in Mandarin Chinese
         english: English translation of the text
-        graded: Dictionary containing graded versions at different CEFR levels
+        graded: Dictionary containing graded versions at different difficulty levels
+                Keys: 'BEGINNER', 'INTERMEDIATE'
+                Values: graded text at each level
     """
     mandarin: str
     english: str
-    graded: Dict[str, str] = None  # Key: CEFR level (A1-B2), Value: graded text
+    graded: Dict[str, str] = None  # Key: difficulty level, Value: graded text
 
     def add_graded_version(self, level: str, text: str) -> None:
-        """Add a graded version of this section at specified CEFR level."""
+        """Add a graded version of this section at specified difficulty level."""
         if self.graded is None:
             self.graded = {}
         self.graded[level] = text
@@ -63,7 +65,18 @@ class Article:
         return "\n\n".join(section.english for section in self.sections)
     
     def get_graded_content(self, level: str) -> Optional[str]:
-        """Get full article content at specified CEFR level."""
+        """
+        Get full article content at specified difficulty level.
+        
+        Args:
+            level: Difficulty level ('BEGINNER', 'INTERMEDIATE', or 'native')
+            
+        Returns:
+            Optional[str]: The graded content if available, None otherwise
+        """
+        if level == 'native':
+            return self.mandarin_content
+            
         if not all(section.graded and level in section.graded 
                   for section in self.sections):
             return None

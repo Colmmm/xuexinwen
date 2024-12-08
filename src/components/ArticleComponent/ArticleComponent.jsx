@@ -4,11 +4,9 @@ import Navbar from '../Navbar/Navbar'
 import './ArticleComponent.css'
 
 const GRADE_LEVELS = [
-  { value: 'a1', label: 'A1 入门 (Beginner)' },
-  { value: 'a2', label: 'A2 基础 (Elementary)' },
-  { value: 'b1', label: 'B1 中级 (Intermediate)' },
-  { value: 'b2', label: 'B2 中高级 (Upper Intermediate)' },
-  { value: 'native', label: '原文 (Native)' }
+  { value: 'BEGINNER', label: '入门 (Beginner)' },
+  { value: 'INTERMEDIATE', label: '中级 (Intermediate)' },
+  { value: 'native', label: '高級/原文 (Advanced/Original)' }
 ]
 
 const ArticleComponent = () => {
@@ -26,7 +24,7 @@ const ArticleComponent = () => {
     fetch(`${apiUrl}/api/articles/${articleId}/grade/${level}`)
       .then(response => {
         if (!response.ok) {
-          throw new Error(`This article is not available in ${level.toUpperCase()} level yet`)
+          throw new Error(`This article is not available in ${level === 'native' ? 'original' : level.toLowerCase()} level yet`)
         }
         return response.json()
       })
@@ -53,7 +51,7 @@ const ArticleComponent = () => {
             <h2>Oops!</h2>
             <p>{error}</p>
             <button onClick={() => handleGradeChange('native')}>
-              返回原文 (Return to Native Version)
+              返回原文 (Return to Original Version)
             </button>
           </div>
         </div>

@@ -21,7 +21,7 @@ class ArticleProcessor:
     
     def process_article(self, article: Article) -> Article:
         """
-        Process an article, generating graded versions for each section.
+        Process an article, generating graded versions at beginner and intermediate levels.
         
         Args:
             article: Article to process
@@ -30,42 +30,40 @@ class ArticleProcessor:
             Article: Processed article with graded versions added
         """
         print(f"\nProcessing article: {article.english_title}")
-        print(f"Number of sections to process: {len(article.sections)}")
         
-        # Process each section
-        for i, section in enumerate(article.sections, 1):
-            print(f"\nProcessing section {i}/{len(article.sections)}")
-            print(f"Original mandarin text: {section.mandarin[:100]}...")
-            print(f"Original english text: {section.english[:100]}...")
-            
-            # Get all graded versions in one API call
-            graded_versions = self._grade_section(section.mandarin, section.english)
-            if graded_versions:
-                print(f"Received graded versions for section {i}")
-                # Add each graded version to the section
-                for level, text in graded_versions.items():
-                    print(f"Adding {level} version: {text[:50]}...")
-                    section.add_graded_version(level, text)
-            else:
-                print(f"No graded versions received for section {i}")
-            break # lets only focus on one section for now
+        # Process the entire article content at once
+        graded_versions = self._grade_content(article.mandarin_content, article.english_content)
+        
+        if graded_versions:
+            print("Received graded versions for article")
+            # Split the graded content into sections
+            for level, content in graded_versions.items():
+                sections = content.split('\n\n')
+                # Ensure we have the same number of sections as the original
+                if len(sections) == len(article.sections):
+                    for i, section_text in enumerate(sections):
+                        article.sections[i].add_graded_version(level, section_text.strip())
+                else:
+                    print(f"Warning: Mismatch in number of sections for {level}")
+        else:
+            print("No graded versions received")
         
         print("\nArticle processing complete")
         return article
     
-    def _grade_section(self, mandarin_text: str, english_text: str) -> Dict[str, str]:
+    def _grade_content(self, mandarin_text: str, english_text: str) -> Dict[str, str]:
         """
-        Create graded versions of text at all CEFR levels.
+        Create graded versions of the entire article content at beginner and intermediate levels.
         
         Args:
-            mandarin_text: Chinese text to grade
-            english_text: English translation for context
+            mandarin_text: Complete Chinese text to grade
+            english_text: Complete English translation for context
             
         Returns:
-            Dict[str, str]: Dictionary mapping CEFR levels to graded text
+            Dict[str, str]: Dictionary mapping difficulty levels to graded text
         """
         try:
-            print("\nMaking API call to grade section...")
+            print("\nMaking API call to grade content...")
             response = self._call_language_api({
                 "task": "grade_all_levels",
                 "mandarin_content": mandarin_text,
@@ -86,7 +84,7 @@ class ArticleProcessor:
             data: Request data including task and content
             
         Returns:
-            Dict: API response with graded versions for all CEFR levels
+            Dict: API response with graded versions
             
         Raises:
             requests.RequestException: If API call fails
@@ -97,49 +95,48 @@ class ArticleProcessor:
             "Content-Type": "application/json",
             "HTTP-Referer": "https://xue-xinwen.com"
         }
-        prompt=f"""
-        Rewrite the following Chinese text at four CEFR levels (A1, A2, B1, B2).
+        prompt = f"""
+        Rewrite the following Chinese text at two difficulty levels (Beginner and Intermediate).
+        Maintain the same paragraph structure as the original text.
 
         Important Instructions:
 
-            Proper Nouns (Names, Places, Organizations):
-                A1: Convert all proper nouns (e.g., names of people, places, organizations) into English, even if they're common or obvious.
-                A2: Convert most proper nouns into English except universally recognized ones like 中國 (China) or 美國 (USA).
-                B1: Use a mix of English and Chinese for names—retain common Chinese names in their original form and use English for less familiar ones.
-                B2: Retain proper nouns in Chinese unless English is more natural in context.
-            Vocabulary and Grammar:
-                A1: Use the simplest vocabulary and grammar. Short, clear sentences are preferred.
-                A2: Slightly more complex than A1, maintaining clear structure.
-                B1: Use moderately complex vocabulary and grammar suitable for intermediate learners.
-                B2: Use vocabulary and grammar closest to the original text.
-            Meaning: Keep the main meaning of the text consistent across all levels.
-            Output Only the Text: Do not include any explanations, comments, or deviations from the format below.
+        Beginner Level:
+        - Use only basic vocabulary and simple grammar patterns
+        - Short, clear sentences with basic structures
+        - Convert all proper nouns (names, places, organizations) to English
+        - Focus on high-frequency words and essential grammar
+        - Apart from keywords and names important for context, try to use only HSK 1-3 vocabulary
+
+        Intermediate Level:
+        - Use moderate vocabulary and grammar complexity
+        - Mix of simple and compound sentences
+        - Keep common Chinese names/places in Chinese, convert less common ones to English
+        - Include some idiomatic expressions
+        - Use vocabulary up to HSK 4-5 level
 
         Input:
 
-            Original Chinese:
-            {data['mandarin_content']}
-            English Translation (Context):
-            {data['english_content']}
+        Original Chinese:
+        {data['mandarin_content']}
+
+        English Translation (Context):
+        {data['english_content']}
 
         Output Format (strictly):
-        A1: [Simplified Mandarin text at A1 level with all names in English]  
-        A2: [Simplified Mandarin text at A2 level with most names in English, except obvious ones like 中國/China]  
-        B1: [Simplified Mandarin text at B1 level with a mix of English and Chinese names]  
-        B2: [Simplified Mandarin text at B2 level, closest to original complexity, using Chinese for most names]  
-        Additional Emphasis:
-        Names (e.g., "John", "Microsoft", "Munich") and proper nouns must be converted to English at the A1 and A2 levels unless they are very obvious or universally recognized. 
-        Double-check the output to ensure names are correctly handled.
-        """ 
+        BEGINNER:
+        [Simplified Chinese text at beginner level, separated by original paragraph breaks]
+
+        INTERMEDIATE:
+        [Moderately complex Chinese text at intermediate level, separated by original paragraph breaks]
+        """
         
         print("Making request to OpenRouter API...")
-        # Make API call
         try:
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
                 json={
-                    #"model": "meta-llama/llama-3.1-70b-instruct:free",  # Using free model while testing instead of "openai/gpt-4-mini",
                     "model": "openai/gpt-4o-mini",
                     "messages": [
                         {"role": "user", "content": prompt}
@@ -150,7 +147,6 @@ class ArticleProcessor:
             print(f"API Response status code: {response.status_code}")
             response.raise_for_status()
             
-            # Parse response to extract graded versions
             result = response.json()
             print("Successfully received JSON response")
             content = result['choices'][0]['message']['content'].strip()
@@ -164,21 +160,19 @@ class ArticleProcessor:
             for line in content.split('\n'):
                 line = line.strip()
                 if line:
-                    if line.startswith(('A1:', 'A2:', 'B1:', 'B2:')):
+                    if line.startswith(('BEGINNER:', 'INTERMEDIATE:')):
                         # Save previous level if exists
                         if current_level and current_text:
-                            graded_versions[current_level] = ' '.join(current_text)
+                            graded_versions[current_level] = '\n\n'.join(current_text)
                             current_text = []
                         # Start new level
-                        current_level = line[:2]
-                        current_text = [line[3:].strip()]
-                    else:
-                        # Continue current level
-                        current_text.append(line)
+                        current_level = line.split(':')[0]
+                        continue
+                    current_text.append(line)
             
             # Save last level
             if current_level and current_text:
-                graded_versions[current_level] = ' '.join(current_text)
+                graded_versions[current_level] = '\n\n'.join(current_text)
             
             print(f"Successfully parsed {len(graded_versions)} graded versions")
             return {'graded_versions': graded_versions}

@@ -26,10 +26,8 @@ processor = ArticleProcessor()
 
 # Enums for validation
 class GradeLevel(str, Enum):
-    A1 = "a1"
-    A2 = "a2"
-    B1 = "b1"
-    B2 = "b2"
+    BEGINNER = "BEGINNER"
+    INTERMEDIATE = "INTERMEDIATE"
     NATIVE = "native"
 
 # Pydantic models for API responses
@@ -110,7 +108,7 @@ async def get_graded_article(
     
     Args:
         article_id: The ID of the article
-        level: The grade level (a1, a2, b1, b2, or native)
+        level: The grade level (BEGINNER, INTERMEDIATE, or native)
     """
     article = db.get_article(article_id)
     if not article:
@@ -136,16 +134,15 @@ async def get_graded_article(
         }
     else:
         # Check if any sections have the requested level
-        level_upper = level.value.upper()
         graded_sections = [
-            s.graded[level_upper] if s.graded and level_upper in s.graded else s.mandarin
+            s.graded[level.value] if s.graded and level.value in s.graded else s.mandarin
             for s in article.sections
         ]
         
-        if not any(s.graded and level_upper in s.graded for s in article.sections):
+        if not any(s.graded and level.value in s.graded for s in article.sections):
             raise HTTPException(
                 status_code=404,
-                detail=f"Graded version not available for CEFR level {level_upper}"
+                detail=f"Graded version not available for {level.value.lower()} level"
             )
         
         return {

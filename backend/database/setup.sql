@@ -40,10 +40,10 @@ CREATE TABLE sections (
     UNIQUE (article_id, position)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Create graded_sections table
+-- Create graded_sections table with just beginner and intermediate levels
 CREATE TABLE graded_sections (
     section_id BIGINT,
-    cefr_level ENUM('A1', 'A2', 'B1', 'B2'),
+    cefr_level ENUM('BEGINNER', 'INTERMEDIATE') NOT NULL,
     content TEXT NOT NULL,
     PRIMARY KEY (section_id, cefr_level),
     FOREIGN KEY (section_id) REFERENCES sections(section_id)
@@ -54,3 +54,4 @@ CREATE TABLE graded_sections (
 CREATE INDEX idx_articles_date ON articles(date);
 CREATE INDEX idx_articles_source ON articles(source);
 CREATE INDEX idx_articles_processed ON articles(processed);
+CREATE INDEX idx_graded_sections_level ON graded_sections(cefr_level);
