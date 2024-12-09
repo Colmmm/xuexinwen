@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../Navbar/Navbar'
+import config from '../../config'
 import './ArticleComponent.css'
 
 const GRADE_LEVELS = [
@@ -15,13 +16,9 @@ const ArticleComponent = () => {
   const [article, setArticle] = useState(null)
   const [error, setError] = useState(null)
 
-  const apiUrl = import.meta.env.VITE_PRODUCTION === 'true'
-    ? 'http://xue-xinwen.com:5000'
-    : 'http://localhost:5000'
-
   useEffect(() => {
     setError(null)
-    fetch(`${apiUrl}/api/articles/${articleId}/grade/${level}`)
+    fetch(`${config.apiUrl}/articles/${articleId}/grade/${level}`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`This article is not available in ${level === 'native' ? 'original' : level.toLowerCase()} level yet`)
@@ -36,7 +33,7 @@ const ArticleComponent = () => {
         console.error('Error fetching article:', error)
         setError(error.message)
       })
-  }, [articleId, level, apiUrl])
+  }, [articleId, level])
 
   const handleGradeChange = (newLevel) => {
     navigate(`/article/${articleId}/grade/${newLevel}`)
