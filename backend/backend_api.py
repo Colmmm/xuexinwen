@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
 from enum import Enum
+import os
 
 from article import Article
 from fetch_articles import fetch_articles, generate_article_id
@@ -80,6 +81,7 @@ class GradedArticleResponse(BaseModel):
     image_url: Optional[str] = None
     metadata: Optional[Dict] = None
 
+@app.get("/api/articles", response_model=List[ArticleResponse])
 @app.get("/api/articles/", response_model=List[ArticleResponse])
 async def get_articles(
     source: Optional[str] = None,
