@@ -12,10 +12,23 @@ from db_manager import DatabaseManager
 
 app = FastAPI(title="News Article API")
 
+# Define allowed origins based on the environment
+BACKEND_PRODUCTION = os.getenv("BACKEND_PRODUCTION", "false").lower() == "true"
+if BACKEND_PRODUCTION:
+    origins = [
+        "https://xue-xinwen.com",  # Production domain
+        "https://www.xue-xinwen.com"  # Optional subdomain
+    ]
+else:
+    origins = [
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",  # Localhost with explicit IP
+    ]
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=origins,  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
