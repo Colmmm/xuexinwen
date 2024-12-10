@@ -9,7 +9,7 @@ services:
       - .:/app
       - /app/node_modules
     environment:
-      - VITE_PRODUCTION=true
+      - VITE_PRODUCTION=false
     depends_on:
       - backend
 
@@ -24,7 +24,7 @@ services:
     env_file:
       - xuexinwen.env
     environment:
-      - BACKEND_PRODUCTION=true
+      - BACKEND_PRODUCTION=false
     depends_on:
       mysql:
         condition: service_healthy
