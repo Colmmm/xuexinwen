@@ -210,37 +210,15 @@ async def fetch_new_articles(
                 "message": "No new articles found to process"
             }
         
-        # Filter out already processed articles
-        new_articles = []
+        # Queue all articles for processing
+        # process_article now handles all database operations internally
         for article in raw_articles:
-            exists, processed = db.check_article_status(article.article_id)
-            
-            if not exists:
-                # Add to database unprocessed
-                logger.info(f"Adding new unprocessed article: {article.article_id}")
-                db.add_article(article, processed=False)
-                new_articles.append(article)
-            elif not processed:
-                # Get existing unprocessed article
-                logger.info(f"Found existing unprocessed article: {article.article_id}")
-                stored_article = db.get_article(article.article_id)
-                if stored_article:
-                    new_articles.append(stored_article)
-        
-        if not new_articles:
-            logger.info("No new articles to process")
-            return {
-                "message": "No new articles to process"
-            }
-        
-        # Queue background processing for new/unprocessed articles
-        for article in new_articles:
             logger.info(f"Queueing article for processing: {article.article_id}")
-            background_tasks.add_task(process_and_store_article, article)
+            background_tasks.add_task(processor.process_article, article)
         
-        logger.info(f"Started processing {len(new_articles)} articles")
+        logger.info(f"Started processing {len(raw_articles)} articles")
         return {
-            "message": f"Started processing {len(new_articles)} articles"
+            "message": f"Started processing {len(raw_articles)} articles"
         }
     except Exception as e:
         logger.error(f"Error fetching articles: {str(e)}", exc_info=True)
@@ -259,30 +237,20 @@ async def reprocess_article(
     Processing happens in the background.
     """
     logger.info(f"Requesting reprocess of article: {article_id}")
-    exists, processed = db.check_article_status(article_id)
-    if not exists:
+    
+    # Get the article - if it doesn't exist, this will return None
+    article = db.get_article(article_id)
+    if not article:
         logger.warning(f"Article not found for reprocessing: {article_id}")
         raise HTTPException(
             status_code=404,
             detail="Article not found"
         )
     
-    article = db.get_article(article_id)
     logger.info(f"Queueing article for reprocessing: {article_id}")
-    background_tasks.add_task(process_and_store_article, article)
+    # Force reprocessing even if already processed
+    background_tasks.add_task(processor.process_article, article, force=True)
     
     return {
         "message": f"Started reprocessing article {article_id}"
     }
-
-def process_and_store_article(article: Article):
-    """Background task to process and store an article."""
-    try:
-        logger.info(f"Starting background processing of article: {article.article_id}")
-        # Generate graded versions
-        processed_article = processor.process_article(article)
-        # Store in database and mark as processed
-        db.add_article(processed_article, processed=True)
-        logger.info(f"Successfully processed and stored article: {article.article_id}")
-    except Exception as e:
-        logger.error(f"Error processing article {article.article_id}: {str(e)}", exc_info=True)

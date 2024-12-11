@@ -28,12 +28,16 @@ async def fetch_and_process_articles():
         # Fetch articles (non-async)
         articles = fetch_articles()
         
-        # Process and store each article
+        if not articles:
+            logger.info("No new articles found")
+            return
+        
+        # Process each article
         processed_count = 0
         for article in articles:
             try:
-                processed_article = processor.process_article(article)
-                db.add_article(processed_article)  # non-async
+                # process_article now handles all database operations internally
+                processor.process_article(article)
                 processed_count += 1
             except Exception as e:
                 logger.error(f"Error processing article {getattr(article, 'article_id', 'unknown')}: {str(e)}", exc_info=True)

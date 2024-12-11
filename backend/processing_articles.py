@@ -4,6 +4,7 @@ import requests
 
 from article import Article
 from logger_config import setup_logger
+from db_manager import DatabaseManager
 
 logger = setup_logger(__name__)
 
@@ -21,18 +22,28 @@ class ArticleProcessor:
         logger.info(f"Initializing ArticleProcessor with API key: {'Present' if self.api_key else 'Missing'}")
         if not self.api_key:
             raise ValueError("API key is required for content processing")
+        self.db = DatabaseManager()
     
-    def process_article(self, article: Article) -> Article:
+    def process_article(self, article: Article, force: bool = False) -> Article:
         """
         Process an article, generating graded versions at beginner and intermediate levels.
+        Handles duplicate checking and status updates.
         
         Args:
             article: Article to process
+            force: Whether to force processing even if already processed
             
         Returns:
             Article: Processed article with graded versions added
         """
-        logger.info(f"Processing article: {article.english_title}")
+        logger.info(f"Processing article: {article.article_id}")
+        
+        # Check if article has already been processed
+        exists, processed = self.db.check_article_status(article.article_id)
+        
+        if exists and processed and not force:
+            logger.info(f"Article {article.article_id} already processed, skipping")
+            return self.db.get_article(article.article_id)
         
         # Process the entire article content at once
         graded_versions = self._grade_content(article.mandarin_content, article.english_content)
@@ -51,6 +62,8 @@ class ArticleProcessor:
         else:
             logger.warning("No graded versions received")
         
+        # Store processed article and mark as processed
+        self.db.add_article(article, processed=True)
         logger.info("Article processing complete")
         return article
     
