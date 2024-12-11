@@ -7,6 +7,9 @@ import time
 import json
 
 from article import Article, ArticleSection
+from logger_config import setup_logger
+
+logger = setup_logger(__name__)
 
 class DatabaseManager:
     """Manages MySQL database operations for articles."""
@@ -32,9 +35,9 @@ class DatabaseManager:
     
     def _test_connection(self):
         """Test the database connection."""
-        print(f"Attempting to connect to MySQL at {self.dbconfig['host']}:{self.dbconfig['port']}")
-        print(f"Database: {self.dbconfig['database']}")
-        print(f"User: {self.dbconfig['user']}")
+        logger.info(f"Attempting to connect to MySQL at {self.dbconfig['host']}:{self.dbconfig['port']}")
+        logger.info(f"Database: {self.dbconfig['database']}")
+        logger.info(f"User: {self.dbconfig['user']}")
         
         retries = 0
         while retries < self.max_retries:
@@ -43,7 +46,7 @@ class DatabaseManager:
                 cursor = conn.cursor()
                 cursor.execute("SELECT VERSION()")
                 version = cursor.fetchone()
-                print(f"Connected to MySQL version: {version[0]}")
+                logger.info(f"Connected to MySQL version: {version[0]}")
                 
                 # Set character set
                 cursor.execute("SET NAMES utf8mb4")
@@ -58,9 +61,9 @@ class DatabaseManager:
                 return
             except Error as e:
                 retries += 1
-                print(f"Connection attempt {retries} failed: {str(e)}")
+                logger.error(f"Connection attempt {retries} failed: {str(e)}")
                 if retries < self.max_retries:
-                    print(f"Retrying in {self.retry_delay} seconds...")
+                    logger.info(f"Retrying in {self.retry_delay} seconds...")
                     time.sleep(self.retry_delay)
                 else:
                     raise Exception(f"Failed to connect after {self.max_retries} attempts")
@@ -88,10 +91,10 @@ class DatabaseManager:
                 last_error = e
                 retries += 1
                 if retries == self.max_retries:
-                    print(f"Final connection error: {str(e)}")
+                    logger.error(f"Final connection error: {str(e)}")
                     raise Exception(f"Failed to connect to MySQL after {self.max_retries} attempts: {str(e)}")
-                print(f"Failed to get MySQL connection (attempt {retries}/{self.max_retries}). Error: {str(e)}")
-                print(f"Retrying in {self.retry_delay} seconds...")
+                logger.error(f"Failed to get MySQL connection (attempt {retries}/{self.max_retries}). Error: {str(e)}")
+                logger.info(f"Retrying in {self.retry_delay} seconds...")
                 time.sleep(self.retry_delay)
 
     def check_article_status(self, article_id: str) -> Tuple[bool, bool]:
@@ -104,6 +107,7 @@ class DatabaseManager:
         Returns:
             Tuple[bool, bool]: (exists, processed)
         """
+        logger.info(f"Checking article {article_id} if it exists and has been processed.")
         conn = None
         cursor = None
         
@@ -116,6 +120,8 @@ class DatabaseManager:
             """, (article_id, article_id))
             result = cursor.fetchone()
             return bool(result['article_exists']), bool(result['is_processed'])
+        except Error as e:
+            logger.error(f"Error encountered trying to mark article {article_id} as processed with error {e}")
         finally:
             if cursor:
                 cursor.close()
@@ -129,6 +135,7 @@ class DatabaseManager:
         Args:
             article_id: ID of the article to mark as processed
         """
+        logger.info(f"Marking article {article_id} as being processed.")
         conn = None
         cursor = None
         
@@ -139,6 +146,8 @@ class DatabaseManager:
                 WHERE article_id = %s
             """, (article_id,))
             conn.commit()
+        except Error as e:
+            logger.error(f"Error encountered trying to mark article {article_id} as processed with error {e}")
         finally:
             if cursor:
                 cursor.close()
@@ -153,7 +162,7 @@ class DatabaseManager:
             article: Article to add
             processed: Whether the article has been processed
         """
-        print(f"\nAttempting to add article {article.article_id} to database")
+        logger.info(f"Attempting to add article {article.article_id} to database")
         conn = None
         cursor = None
         
@@ -164,7 +173,7 @@ class DatabaseManager:
             conn.start_transaction()
             
             # Insert main article data
-            print("Inserting article data...")
+            logger.info("Inserting article data...")
             cursor.execute("""
                 INSERT INTO articles (
                     article_id, url, date, source,
@@ -196,7 +205,7 @@ class DatabaseManager:
             conn.commit()
             
             # Clear existing authors and insert new ones
-            print("Updating authors...")
+            logger.info("Updating authors...")
             cursor.execute("""
                 DELETE FROM authors WHERE article_id = %s
             """, (article.article_id,))
@@ -211,7 +220,7 @@ class DatabaseManager:
                 conn.commit()
             
             # Clear existing sections and graded versions
-            print("Updating sections...")
+            logger.info("Updating sections...")
             cursor.execute("""
                 DELETE s FROM sections s
                 WHERE s.article_id = %s
@@ -245,12 +254,12 @@ class DatabaseManager:
                         """, (section_id, level, content))
                         conn.commit()
             
-            print(f"Successfully saved article {article.article_id} to database")
+            logger.info(f"Successfully saved article {article.article_id} to database")
             
         except Error as e:
             if conn:
                 conn.rollback()
-            print(f"Error saving article to database: {str(e)}")
+            logger.error(f"Error saving article to database: {str(e)}", exc_info=True)
             raise e
             
         finally:
@@ -282,6 +291,7 @@ class DatabaseManager:
             article_data = cursor.fetchone()
             
             if not article_data:
+                logger.warning(f"Article {article_id} not found in database")
                 return None
             
             # Get authors
@@ -345,6 +355,10 @@ class DatabaseManager:
                 metadata=metadata
             )
             
+        except Error as e:
+            logger.error(f"Error retrieving article {article_id}: {str(e)}", exc_info=True)
+            raise e
+            
         finally:
             if cursor:
                 cursor.close()
@@ -387,11 +401,18 @@ class DatabaseManager:
             article_ids = [row['article_id'] for row in cursor.fetchall()]
             
             # Fetch full articles
-            return [
+            articles = [
                 self.get_article(article_id)
                 for article_id in article_ids
                 if article_id
             ]
+            
+            logger.info(f"Retrieved {len(articles)} articles from database")
+            return articles
+            
+        except Error as e:
+            logger.error(f"Error retrieving articles: {str(e)}", exc_info=True)
+            raise e
             
         finally:
             if cursor:

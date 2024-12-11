@@ -10,6 +10,9 @@ from article import Article
 from fetch_articles import fetch_articles, generate_article_id
 from processing_articles import ArticleProcessor
 from db_manager import DatabaseManager
+from logger_config import setup_logger
+
+logger = setup_logger(__name__)
 
 app = FastAPI(title="News Article API")
 
@@ -25,6 +28,8 @@ else:
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:5173",  # Localhost with explicit IP
     ]
+
+logger.info(f"Configuring CORS with origins: {origins}")
 
 # Configure CORS
 app.add_middleware(
@@ -90,13 +95,16 @@ async def get_articles(
 ):
     """Get a list of articles with optional filtering."""
     try:
+        logger.info(f"Fetching articles - source: {source}, limit: {limit}, offset: {offset}")
         articles = db.get_articles(
             source=source,
             limit=limit,
             offset=offset
         )
+        logger.info(f"Successfully retrieved {len(articles)} articles")
         return articles
     except Exception as e:
+        logger.error(f"Error retrieving articles: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving articles: {str(e)}"
@@ -105,12 +113,15 @@ async def get_articles(
 @app.get("/api/articles/{article_id}", response_model=ArticleResponse)
 async def get_article(article_id: str):
     """Get metadata and content for a specific article."""
+    logger.info(f"Fetching article: {article_id}")
     article = db.get_article(article_id)
     if not article:
+        logger.warning(f"Article not found: {article_id}")
         raise HTTPException(
             status_code=404,
             detail="Article not found"
         )
+    logger.info(f"Successfully retrieved article: {article_id}")
     return article
 
 @app.get("/api/articles/{article_id}/grade/{level}", response_model=GradedArticleResponse)
@@ -125,8 +136,10 @@ async def get_graded_article(
         article_id: The ID of the article
         level: The grade level (BEGINNER, INTERMEDIATE, or native)
     """
+    logger.info(f"Fetching graded article: {article_id}, level: {level}")
     article = db.get_article(article_id)
     if not article:
+        logger.warning(f"Article not found: {article_id}")
         raise HTTPException(
             status_code=404,
             detail="Article not found"
@@ -134,6 +147,7 @@ async def get_graded_article(
     
     if level == GradeLevel.NATIVE:
         # Return native (original) version
+        logger.info(f"Returning native version of article: {article_id}")
         return {
             "article_id": article.article_id,
             "url": article.url,
@@ -155,11 +169,13 @@ async def get_graded_article(
         ]
         
         if not any(s.graded and level.value in s.graded for s in article.sections):
+            logger.warning(f"Graded version not available for {level.value} level in article: {article_id}")
             raise HTTPException(
                 status_code=404,
                 detail=f"Graded version not available for {level.value.lower()} level"
             )
         
+        logger.info(f"Returning {level.value} version of article: {article_id}")
         return {
             "article_id": article.article_id,
             "url": article.url,
@@ -184,10 +200,12 @@ async def fetch_new_articles(
     Processing happens in the background.
     """
     try:
+        logger.info(f"Starting fetch of new articles from source: {source if source else 'all'}")
         # Fetch articles
         raw_articles = fetch_articles(source)
         
         if not raw_articles:
+            logger.info("No new articles found to process")
             return {
                 "message": "No new articles found to process"
             }
@@ -199,27 +217,33 @@ async def fetch_new_articles(
             
             if not exists:
                 # Add to database unprocessed
+                logger.info(f"Adding new unprocessed article: {article.article_id}")
                 db.add_article(article, processed=False)
                 new_articles.append(article)
             elif not processed:
                 # Get existing unprocessed article
+                logger.info(f"Found existing unprocessed article: {article.article_id}")
                 stored_article = db.get_article(article.article_id)
                 if stored_article:
                     new_articles.append(stored_article)
         
         if not new_articles:
+            logger.info("No new articles to process")
             return {
                 "message": "No new articles to process"
             }
         
         # Queue background processing for new/unprocessed articles
         for article in new_articles:
+            logger.info(f"Queueing article for processing: {article.article_id}")
             background_tasks.add_task(process_and_store_article, article)
         
+        logger.info(f"Started processing {len(new_articles)} articles")
         return {
             "message": f"Started processing {len(new_articles)} articles"
         }
     except Exception as e:
+        logger.error(f"Error fetching articles: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Error fetching articles: {str(e)}"
@@ -234,14 +258,17 @@ async def reprocess_article(
     Reprocess an existing article to generate new graded versions.
     Processing happens in the background.
     """
+    logger.info(f"Requesting reprocess of article: {article_id}")
     exists, processed = db.check_article_status(article_id)
     if not exists:
+        logger.warning(f"Article not found for reprocessing: {article_id}")
         raise HTTPException(
             status_code=404,
             detail="Article not found"
         )
     
     article = db.get_article(article_id)
+    logger.info(f"Queueing article for reprocessing: {article_id}")
     background_tasks.add_task(process_and_store_article, article)
     
     return {
@@ -251,20 +278,11 @@ async def reprocess_article(
 def process_and_store_article(article: Article):
     """Background task to process and store an article."""
     try:
+        logger.info(f"Starting background processing of article: {article.article_id}")
         # Generate graded versions
         processed_article = processor.process_article(article)
         # Store in database and mark as processed
         db.add_article(processed_article, processed=True)
+        logger.info(f"Successfully processed and stored article: {article.article_id}")
     except Exception as e:
-        print(f"Error processing article {article.article_id}: {str(e)}")
-
-# Initial fetch of articles if database is empty
-@app.on_event("startup")
-async def startup_event():
-    try:
-        articles = db.get_articles(limit=1)
-        if not articles:
-            print("Database empty, performing initial fetch...")
-            await fetch_new_articles(None)
-    except Exception as e:
-        print(f"Error during startup fetch: {str(e)}")
+        logger.error(f"Error processing article {article.article_id}: {str(e)}", exc_info=True)

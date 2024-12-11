@@ -3,79 +3,139 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
-import schedule
-import time
-from threading import Thread
 import os
+import logging
+from logging.handlers import RotatingFileHandler
+from datetime import datetime, timedelta
 
 from fetch_articles import fetch_articles
 from processing_articles import ArticleProcessor
 from db_manager import DatabaseManager
 from backend_api import app as api_app
 
+# Configure logging
+def setup_logging():
+    # Remove any existing handlers to prevent duplicates
+    logger = logging.getLogger('xuexinwen')
+    if logger.handlers:
+        logger.handlers.clear()
+    
+    logger.setLevel(logging.INFO)
+    
+    # Create formatters
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Create and configure file handler (with rotation)
+    file_handler = RotatingFileHandler(
+        'xuexinwen_backend.log',
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    
+    # Create and configure console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    
+    # Add both handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+logger = setup_logging()
+
 # Initialize components
 db = DatabaseManager()
 processor = ArticleProcessor()
 
-def fetch_and_process_articles():
+async def fetch_and_process_articles():
     """Fetch and process articles from all sources."""
     try:
-        # Fetch articles
+        logger.info("Starting article fetch and process routine")
+        # Fetch articles (non-async)
         articles = fetch_articles()
         
         # Process and store each article
+        processed_count = 0
         for article in articles:
             try:
                 processed_article = processor.process_article(article)
-                db.add_article(processed_article)
+                db.add_article(processed_article)  # non-async
+                processed_count += 1
             except Exception as e:
-                print(f"Error processing article {article.article_id}: {str(e)}")
+                logger.error(f"Error processing article {getattr(article, 'article_id', 'unknown')}: {str(e)}", exc_info=True)
             
-        print(f"Successfully processed {len(articles)} articles")
+        logger.info(f"Successfully processed {processed_count} out of {len(articles)} articles")
+        
     except Exception as e:
-        print(f"Error in fetch and process routine: {str(e)}")
+        logger.error(f"Error in fetch and process routine: {str(e)}", exc_info=True)
 
-def run_scheduler():
-    """Run the scheduler in a separate thread."""
-    # Schedule article fetching every 6 hours
-    schedule.every(6).hours.do(fetch_and_process_articles)
-    
+async def scheduler():
+    """Async scheduler for periodic article fetching."""
+    logger.info("Article fetch scheduler started")
     while True:
-        schedule.run_pending()
-        time.sleep(60)
+        try:
+            await fetch_and_process_articles()
+            next_run = datetime.now() + timedelta(hours=6)
+            logger.info(f"Next scheduled run at: {next_run}")
+            #await asyncio.sleep(6 * 60 * 60) # wait 6 hours till next schedule
+            await asyncio.sleep(60)
+        except Exception as e:
+            logger.error(f"Error in scheduler: {str(e)}", exc_info=True)
+            await asyncio.sleep(60)
+
+async def initial_fetch():
+    """Perform initial fetch of articles if database is empty."""
+    try:
+        articles = db.get_articles(limit=1)  # non-async
+        if not articles:
+            logger.info("Database empty, performing initial fetch...")
+            await fetch_and_process_articles()
+        else:
+            logger.info("Database already contains articles, skipping initial fetch")
+    except Exception as e:
+        logger.error(f"Error checking database for initial fetch: {str(e)}", exc_info=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup and shutdown events for the application."""
-    # Configure CORS
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],  # In production, replace with specific origins
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    """Lifespan context manager for startup and shutdown events."""
+    logger.info("Starting application...")
     
-    # Start the scheduler in a separate thread
-    scheduler_thread = Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
+    # Start the scheduler as a background task
+    scheduler_task = asyncio.create_task(scheduler())
     
-    # Do an initial fetch of articles if database is empty
-    try:
-        articles = db.get_articles(limit=1)
-        if not articles:
-            print("Database empty, performing initial fetch...")
-            fetch_and_process_articles()
-    except Exception as e:
-        print(f"Error during initial fetch: {str(e)}")
+    # Perform initial fetch
+    await initial_fetch()
     
     yield
     
-    # Cleanup could be added here if needed
-    pass
+    # Cleanup
+    logger.info("Shutting down application...")
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        logger.info("Scheduler task cancelled")
 
-# Add lifespan handler to the API app
-api_app.router.lifespan = lifespan
+# Create FastAPI app instance
+app = FastAPI(lifespan=lifespan)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include the API router
+app.include_router(api_app.router)
 
 if __name__ == "__main__":
     # Get port from environment or use default
@@ -83,7 +143,7 @@ if __name__ == "__main__":
     
     # Run the FastAPI application
     uvicorn.run(
-        "main:api_app",
+        "main:app",
         host="0.0.0.0",
         port=port,
         reload=not os.environ.get('BACKEND_PRODUCTION', 'false').lower() == 'true'

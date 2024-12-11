@@ -4,6 +4,9 @@ from datetime import datetime
 
 from article import Article, ArticleSection
 from nyt_fetch_articles import nyt_fetch_articles
+from logger_config import setup_logger
+
+logger = setup_logger(__name__)
 
 def generate_article_id(url: str) -> str:
     """Generate a unique article ID based on URL."""
@@ -20,8 +23,8 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
     Returns:
         Article: Created article instance
     """
-    print(f"\nProcessing article: {raw_data.get('url', 'No URL')}")
-    print(f"Raw data keys: {raw_data.keys()}")
+    logger.info(f"Processing article: {raw_data.get('url', 'No URL')}")
+    logger.debug(f"Raw data keys: {raw_data.keys()}")
     
     # Create ArticleSection instances from parallel texts
     sections = []
@@ -48,7 +51,7 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
         authors = raw_data['authors']
     
     # Create and return Article instance
-    return Article(
+    article = Article(
         article_id=generate_article_id(raw_data['url']),
         url=raw_data['url'],
         date=date,
@@ -59,6 +62,8 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
         sections=sections,
         image_url=raw_data.get('image_url')
     )
+    logger.info(f"Successfully processed article: {article.english_title}")
+    return article
 
 # Dictionary mapping source IDs to their fetch functions
 SOURCE_FETCHERS = {
@@ -85,6 +90,7 @@ def fetch_articles(source: str = None) -> List[Article]:
     # Determine which sources to fetch from
     if source:
         if source not in SOURCE_FETCHERS:
+            logger.error(f"Unsupported source: {source}")
             raise ValueError(f"Unsupported source: {source}")
         sources_to_fetch = {source: SOURCE_FETCHERS[source]}
     else:
@@ -93,20 +99,19 @@ def fetch_articles(source: str = None) -> List[Article]:
     # Fetch from each source
     for src_id, fetcher in sources_to_fetch.items():
         try:
-            print(f"\nFetching articles from {src_id}...")
+            logger.info(f"Fetching articles from {src_id}...")
             raw_articles = fetcher()
-            print(f"Retrieved {len(raw_articles)} raw articles from {src_id}")
+            logger.info(f"Retrieved {len(raw_articles)} raw articles from {src_id}")
             
             for raw_article in raw_articles:
                 try:
                     article = create_article_from_raw(raw_article, src_id)
                     articles.append(article)
-                    print(f"Successfully processed article: {article.english_title}")
                 except Exception as e:
-                    print(f"Error processing article: {str(e)}")
-                    print(f"Raw article data: {raw_article}")
+                    logger.error(f"Error processing article: {str(e)}", exc_info=True)
+                    logger.debug(f"Raw article data: {raw_article}")
         except Exception as e:
-            print(f"Error fetching from {src_id}: {str(e)}")
+            logger.error(f"Error fetching from {src_id}: {str(e)}", exc_info=True)
     
     return articles
 
@@ -118,4 +123,5 @@ def register_source(source_id: str, fetcher: Callable[[], List[Dict]]) -> None:
         source_id: Identifier for the news source
         fetcher: Function that fetches articles from this source
     """
+    logger.info(f"Registering new source fetcher: {source_id}")
     SOURCE_FETCHERS[source_id] = fetcher

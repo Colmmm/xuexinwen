@@ -3,6 +3,9 @@ from typing import Dict
 import requests
 
 from article import Article
+from logger_config import setup_logger
+
+logger = setup_logger(__name__)
 
 class ArticleProcessor:
     """Handles processing and grading of article content."""
@@ -15,7 +18,7 @@ class ArticleProcessor:
             api_key: API key for language processing service
         """
         self.api_key = api_key or os.environ.get('OPENROUTER_API_KEY')
-        print(f"Initializing ArticleProcessor with API key: {'Present' if self.api_key else 'Missing'}")
+        logger.info(f"Initializing ArticleProcessor with API key: {'Present' if self.api_key else 'Missing'}")
         if not self.api_key:
             raise ValueError("API key is required for content processing")
     
@@ -29,13 +32,13 @@ class ArticleProcessor:
         Returns:
             Article: Processed article with graded versions added
         """
-        print(f"\nProcessing article: {article.english_title}")
+        logger.info(f"Processing article: {article.english_title}")
         
         # Process the entire article content at once
         graded_versions = self._grade_content(article.mandarin_content, article.english_content)
         
         if graded_versions:
-            print("Received graded versions for article")
+            logger.info("Received graded versions for article")
             # Split the graded content into sections
             for level, content in graded_versions.items():
                 sections = content.split('\n\n')
@@ -44,11 +47,11 @@ class ArticleProcessor:
                     for i, section_text in enumerate(sections):
                         article.sections[i].add_graded_version(level, section_text.strip())
                 else:
-                    print(f"Warning: Mismatch in number of sections for {level}")
+                    logger.warning(f"Mismatch in number of sections for {level}")
         else:
-            print("No graded versions received")
+            logger.warning("No graded versions received")
         
-        print("\nArticle processing complete")
+        logger.info("Article processing complete")
         return article
     
     def _grade_content(self, mandarin_text: str, english_text: str) -> Dict[str, str]:
@@ -63,17 +66,17 @@ class ArticleProcessor:
             Dict[str, str]: Dictionary mapping difficulty levels to graded text
         """
         try:
-            print("\nMaking API call to grade content...")
+            logger.info("Making API call to grade content...")
             response = self._call_language_api({
                 "task": "grade_all_levels",
                 "mandarin_content": mandarin_text,
                 "english_content": english_text
             })
             graded_versions = response.get('graded_versions', {})
-            print(f"Received {len(graded_versions)} graded versions")
+            logger.info(f"Received {len(graded_versions)} graded versions")
             return graded_versions
         except Exception as e:
-            print(f"Error grading text: {str(e)}")
+            logger.error(f"Error grading text: {str(e)}", exc_info=True)
             return {}
     
     def _call_language_api(self, data: Dict) -> Dict:
@@ -89,7 +92,7 @@ class ArticleProcessor:
         Raises:
             requests.RequestException: If API call fails
         """
-        print("\nPreparing API call to OpenRouter...")
+        logger.info("Preparing API call to OpenRouter...")
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -131,7 +134,7 @@ class ArticleProcessor:
         [Moderately complex Chinese text at intermediate level, separated by original paragraph breaks]
         """
         
-        print("Making request to OpenRouter API...")
+        logger.info("Making request to OpenRouter API...")
         try:
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -144,11 +147,11 @@ class ArticleProcessor:
                 }
             )
             
-            print(f"API Response status code: {response.status_code}")
+            logger.debug(f"API Response status code: {response.status_code}")
             response.raise_for_status()
             
             result = response.json()
-            print("Successfully received JSON response")
+            logger.info("Successfully received JSON response")
             content = result['choices'][0]['message']['content'].strip()
             
             # Parse the response into a dictionary of graded versions
@@ -156,7 +159,7 @@ class ArticleProcessor:
             current_level = None
             current_text = []
             
-            print("\nParsing graded versions from response...")
+            logger.info("Parsing graded versions from response...")
             for line in content.split('\n'):
                 line = line.strip()
                 if line:
@@ -174,11 +177,11 @@ class ArticleProcessor:
             if current_level and current_text:
                 graded_versions[current_level] = '\n\n'.join(current_text)
             
-            print(f"Successfully parsed {len(graded_versions)} graded versions")
+            logger.info(f"Successfully parsed {len(graded_versions)} graded versions")
             return {'graded_versions': graded_versions}
             
         except requests.RequestException as e:
-            print(f"API request failed: {str(e)}")
+            logger.error(f"API request failed: {str(e)}", exc_info=True)
             if hasattr(e.response, 'text'):
-                print(f"Error response: {e.response.text}")
+                logger.error(f"Error response: {e.response.text}")
             raise
