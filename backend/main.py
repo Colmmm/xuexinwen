@@ -13,41 +13,9 @@ from processing_articles import ArticleProcessor
 from db_manager import DatabaseManager
 from backend_api import app as api_app
 
-# Configure logging
-def setup_logging():
-    # Remove any existing handlers to prevent duplicates
-    logger = logging.getLogger('xuexinwen')
-    if logger.handlers:
-        logger.handlers.clear()
-    
-    logger.setLevel(logging.INFO)
-    
-    # Create formatters
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    # Create and configure file handler (with rotation)
-    file_handler = RotatingFileHandler(
-        'xuexinwen_backend.log',
-        maxBytes=10*1024*1024,  # 10MB
-        backupCount=5
-    )
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(formatter)
-    
-    # Create and configure console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    
-    # Add both handlers to logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    
-    return logger
+from logger_config import setup_logger
+logger = setup_logger(__name__)
 
-logger = setup_logging()
 
 # Initialize components
 db = DatabaseManager()
