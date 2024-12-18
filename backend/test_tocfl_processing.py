@@ -7,7 +7,7 @@ import re
 import os
 
 # OpenRouter API configuration
-OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY") 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 def load_tocfl_dictionary(tocfl_csv_path):
@@ -35,42 +35,55 @@ def load_tocfl_dictionary(tocfl_csv_path):
     
     return word_dict
 
-def process_with_llm(segmented_text):
+def call_openrouter_api(zh_content, en_content):
     """
-    Process Jieba-segmented text with LLM to identify entities and fix segmentation.
-    Returns entities and corrected segmentation.
+    Use OpenRouter API to extract keywords from title and content.
+    Uses both Chinese and English versions to improve accuracy and provide definitions.
     """
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://xuexinwen.com",
     }
-    
     prompt = f"""
-    Analyze the following Chinese text that has been segmented by Jieba. Your task is to:
-    1. Identify entities (people, places, organizations)
-    2. Fix any incorrect word boundaries
-    3. Return both the entities and corrected segmentation
+    Please analyze the following parallel Chinese and English texts and extract keywords. Return ONLY a valid JSON array with no additional text.
 
-    Segmented text: {segmented_text}
+    ### Chinese Content:
+    {zh_content}
 
-    Return a JSON object with two fields:
-    1. 'entities': Array of objects with 'word' and 'type' fields
-    2. 'corrections': Array of objects with 'original' (incorrectly segmented) and 'corrected' (proper segmentation) fields
+    ### English Content:
+    {en_content}
 
-    Example format:
-    {{
-        "entities": [
-            {{"word": "英伟达", "type": "organization"}},
-            {{"word": "中国", "type": "place"}}
-        ],
-        "corrections": [
-            {{"original": "英 伟 达", "corrected": "英伟达"}},
-            {{"original": "中 国", "corrected": "中国"}}
-        ]
-    }}
+    ### Instructions:
+    1. Extract all **relevant entities** from the text, including:
+    - **Names of people** (e.g., authors, politicians, public figures)
+    - **Places** (e.g., countries, cities, landmarks)
+    - **Organizations** (e.g., companies, institutions, political bodies)
+    - **Other important terms** (e.g., key technical terms, laws, unique concepts)
+    2. Include **multi-word entities** when relevant (e.g., "美国公司", "反垄断法")
+    3. Do not miss common names or entities that are crucial for understanding the text
+    4. Use the following types for classification:
+    - `"person"`: Names of people
+    - `"place"`: Geographical locations or places
+    - `"organization"`: Names of companies, institutions, or organizations
+    - `"other"`: Important terms or concepts not falling into the above categories
+
+    ### Output Format:
+    Return a JSON array where each object contains:
+    - `"word"`: The entity in Chinese as it appears in the text
+    - `"type"`: The classification type (`"person"`, `"place"`, `"organization"`, `"other"`)
+    - `"english"`: The English translation/definition of the entity
+    Example:
+    ```json
+    [
+        {{"word": "英伟达", "type": "organization", "english": "Nvidia"}},
+        {{"word": "中国", "type": "place", "english": "China"}},
+        {{"word": "特朗普", "type": "person", "english": "Trump"}},
+        {{"word": "反垄断法", "type": "other", "english": "Antitrust Law"}}
+    ]
+    ```
     """
-    
+
     data = {
         "model": "openai/gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}],
@@ -81,7 +94,7 @@ def process_with_llm(segmented_text):
         response = requests.post(OPENROUTER_URL, headers=headers, json=data)
         response.raise_for_status()
         
-        print("\nLLM Processing Response:")
+        print("\nAPI Response:")
         print(response.json())
         
         content = response.json()["choices"][0]["message"]["content"]
@@ -92,10 +105,27 @@ def process_with_llm(segmented_text):
             content = content[:-3]
         content = content.strip()
         
-        return json.loads(content)
+        if content.rstrip().endswith(','):
+            content = content.rstrip().rstrip(',') + ']'
+        
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"Initial JSON parsing failed: {e}")
+            if content.count('[') > content.count(']'):
+                content = content + ']'
+            return json.loads(content)
+            
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        return []
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing failed: {e}")
+        print(f"Raw content: {content}")
+        return []
     except Exception as e:
-        print(f"LLM processing error: {e}")
-        return {"entities": [], "corrections": []}
+        print(f"Unexpected error: {e}")
+        return []
 
 def classify_unknown_words(unknown_words):
     """
@@ -107,7 +137,7 @@ def classify_unknown_words(unknown_words):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://xuexinwen.com",
+        "HTTP-Referer": "https://xue-xinwen.com",
     }
     
     words_str = ", ".join(unknown_words)
@@ -181,97 +211,96 @@ def create_ordered_dict():
     levels = ['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'unknown']
     return OrderedDict((level, set()) for level in levels)
 
-def process_article(title, content, tocfl_csv_path):
+def process_article(zh_content, en_content, tocfl_csv_path):
     """
     Process article and categorize words by TOCFL level and entity type.
     Returns lists of simplified characters organized by category.
+    Now uses both Chinese and English content for better entity detection and definitions.
     """
-    # Initialize results with ordered dictionaries
+    # Initialize results
     result = {
         "words": create_ordered_dict(),
-        "entities": defaultdict(set)
+        "entities": {
+            "names": {},
+            "places": {},
+            "organizations": {},
+            "misc": {}
+        }
     }
     
     # Load dictionary
     word_dict = load_tocfl_dictionary(tocfl_csv_path)
     
-    # Step 1: Initial Jieba segmentation
-    full_text = f"{title} {content}"
-    initial_segments = list(jieba.cut(full_text))
-    segmented_text = " ".join(initial_segments)
-    
-    # Step 2: Process with LLM to identify entities and fix segmentation
-    llm_result = process_with_llm(segmented_text)
-    
-    # Step 3: Add entities to Jieba dictionary and result
-    entity_types = {
+    # Process entities first using both Chinese and English content
+    entities = call_openrouter_api(zh_content, en_content)
+    type_mapping = {
         "person": "names",
         "place": "places",
         "organization": "organizations",
         "other": "misc"
     }
     
-    for entity in llm_result.get("entities", []):
+    # Add entities with their English definitions
+    for entity in entities:
         word = entity["word"]
-        entity_type = entity_types[entity["type"]]
-        # Add to Jieba dictionary for future use
+        entity_type = type_mapping[entity["type"]]
+        english_def = entity.get("english", "")
         jieba.add_word(word, freq=1000)
-        # Add to results
+        
+        # Add simplified form of entity if it's in our dictionary
         word_info = word_dict.get(word)
         if word_info:
-            result["entities"][entity_type].add(word_info['simplified'])
+            if english_def:
+                result["entities"][entity_type][word_info['simplified']] = english_def
         else:
-            result["entities"][entity_type].add(word)
+            if english_def:
+                result["entities"][entity_type][word] = english_def
     
-    # Step 4: Apply corrections to segmentation
-    corrected_segments = initial_segments.copy()
-    for correction in llm_result.get("corrections", []):
-        original = correction["original"].split()
-        corrected = correction["corrected"]
-        # Find and replace the incorrect segmentation
-        for i in range(len(corrected_segments)):
-            if i + len(original) <= len(corrected_segments):
-                if corrected_segments[i:i+len(original)] == original:
-                    corrected_segments[i:i+len(original)] = [corrected]
+    # Process full text
+    words = jieba.cut(zh_content, cut_all=False)
     
-    # Step 5: Process words and classify unknowns
+    # Collect unknown words
     unknown_words = set()
     
-    for word in corrected_segments:
+    # Process each word
+    for word in words:
         word = clean_word(word)
         if not word:
             continue
         
+        # Get word info from dictionary
         word_info = word_dict.get(word)
         if word_info:
             level = word_info['level']
             result["words"][level].add(word_info['simplified'])
         else:
+            # Add to unknown words set for later classification
             unknown_words.add(word)
     
-    # Classify unknown words
+    # Classify unknown words if any exist
     if unknown_words:
         classifications = classify_unknown_words(list(unknown_words))
         for word, level in classifications.items():
             result["words"][level].add(word)
+            # Remove from unknown category if successfully classified
             if word in unknown_words:
                 unknown_words.remove(word)
     
-    # Add remaining unknown words
+    # Add remaining unknown words to unknown category
     for word in unknown_words:
         result["words"]["unknown"].add(word)
     
-    # Convert sets to sorted lists
+    # Convert sets to sorted lists for words
     final_result = {
         "words": {
             level: sorted(list(words))
             for level, words in result["words"].items()
-            if words
+            if words  # Include empty levels to maintain order
         },
         "entities": {
-            entity_type: sorted(list(entities))
-            for entity_type, entities in result["entities"].items()
-            if entities
+            entity_type: definitions
+            for entity_type, definitions in result["entities"].items()
+            if definitions  # Only include non-empty entity types
         }
     }
     
@@ -279,18 +308,17 @@ def process_article(title, content, tocfl_csv_path):
 
 # Example usage
 if __name__ == "__main__":
-    with open("test_article.txt", 'r', encoding='utf-8') as file:
-        content = file.read()
-        # Extract title (first line) and content (rest)
-        lines = content.strip().split('\n', 1)
-        title = lines[0].strip()
-        content = lines[1].strip() if len(lines) > 1 else ""
+    with open("test_article_zh.txt", 'r', encoding='utf-8') as file:
+        zh_content = file.read()
+
+    with open("test_article_en.txt", 'r', encoding='utf-8') as file:
+        en_content = file.read()
 
     tocfl_csv_path = "official_tocfl_list_processed.csv"
 
     # Force Jieba to load user dictionary
     jieba.initialize()
     
-    result = process_article(title, content, tocfl_csv_path)
+    result = process_article(zh_content, en_content, tocfl_csv_path)
     print("\nProcessed Article Result:")
     print(json.dumps(result, ensure_ascii=False, indent=2))
