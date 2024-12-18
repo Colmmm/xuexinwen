@@ -55,8 +55,8 @@ async def scheduler():
             await fetch_and_process_articles()
             next_run = datetime.now() + timedelta(hours=6)
             logger.info(f"Next scheduled run at: {next_run}")
-            #await asyncio.sleep(6 * 60 * 60) # wait 6 hours till next schedule
-            await asyncio.sleep(60)
+            await asyncio.sleep(6 * 60 * 60) # wait 6 hours till next schedule
+            #await asyncio.sleep(60)
         except Exception as e:
             logger.error(f"Error in scheduler: {str(e)}", exc_info=True)
             await asyncio.sleep(60)
