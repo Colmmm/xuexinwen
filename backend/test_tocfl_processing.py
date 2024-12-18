@@ -46,7 +46,7 @@ def call_openrouter_api(zh_content, en_content):
         "HTTP-Referer": "https://xuexinwen.com",
     }
     prompt = f"""
-    Please analyze the following parallel Chinese and English texts and extract keywords. Return ONLY a valid JSON array with no additional text.
+    Please analyze the following parallel Chinese and English texts and extract keywords, paying special attention to identifying ALL people mentioned. Return ONLY a valid JSON array with no additional text.
 
     ### Chinese Content:
     {zh_content}
@@ -55,15 +55,19 @@ def call_openrouter_api(zh_content, en_content):
     {en_content}
 
     ### Instructions:
-    1. Extract all **relevant entities** from the text, including:
-    - **Names of people** (e.g., authors, politicians, public figures)
+    1. Extract all **relevant entities** from the text, with special focus on:
+    - **Names of people** (IMPORTANT: Include ALL people mentioned, such as officials, experts, executives, etc.)
+        * Look for both Chinese and English names
+        * Include titles or roles when relevant (e.g., "斯坦福大学学者格雷厄姆·韦伯斯特" -> "Graham Webster, Stanford University scholar")
+        * Don't miss any quoted or referenced individuals
     - **Places** (e.g., countries, cities, landmarks)
     - **Organizations** (e.g., companies, institutions, political bodies)
     - **Other important terms** (e.g., key technical terms, laws, unique concepts)
+
     2. Include **multi-word entities** when relevant (e.g., "美国公司", "反垄断法")
-    3. Do not miss common names or entities that are crucial for understanding the text
+    3. Be thorough in identifying ALL named individuals in the text
     4. Use the following types for classification:
-    - `"person"`: Names of people
+    - `"person"`: Names of people (be comprehensive!)
     - `"place"`: Geographical locations or places
     - `"organization"`: Names of companies, institutions, or organizations
     - `"other"`: Important terms or concepts not falling into the above categories
@@ -72,13 +76,13 @@ def call_openrouter_api(zh_content, en_content):
     Return a JSON array where each object contains:
     - `"word"`: The entity in Chinese as it appears in the text
     - `"type"`: The classification type (`"person"`, `"place"`, `"organization"`, `"other"`)
-    - `"english"`: The English translation/definition of the entity
+    - `"english"`: The English translation/definition of the entity, including titles/roles for people
     Example:
     ```json
     [
+        {{"word": "格雷厄姆·韦伯斯特", "type": "person", "english": "Graham Webster, Stanford University scholar"}},
         {{"word": "英伟达", "type": "organization", "english": "Nvidia"}},
         {{"word": "中国", "type": "place", "english": "China"}},
-        {{"word": "特朗普", "type": "person", "english": "Trump"}},
         {{"word": "反垄断法", "type": "other", "english": "Antitrust Law"}}
     ]
     ```
