@@ -1,0 +1,49 @@
+services:
+  backend_test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    image: xue_backend_test
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      - TESTING=true
+      - BACKEND_PRODUCTION=false
+      - MYSQL_DATABASE=xuexinwen_test
+      - MYSQL_USER=test_user
+      - MYSQL_PASSWORD=test_password
+      - MYSQL_HOST=mysql_test
+      - MYSQL_PORT=3306
+      - MYSQL_CHARSET=utf8mb4
+      - MYSQL_COLLATION=utf8mb4_unicode_ci
+      - OPENROUTER_API_KEY=dummy_key
+    depends_on:
+      mysql_test:
+        condition: service_healthy
+    command: ["tests/", "-v"]
+
+  mysql_test:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=xuexinwen_test
+      - MYSQL_USER=test_user
+      - MYSQL_PASSWORD=test_password
+      - MYSQL_ROOT_PASSWORD=test_root_password
+    volumes:
+      - ./backend/database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    tmpfs:
+      - /var/lib/mysql  # Use tmpfs for test database to improve performance
+    ports:
+      - "3307:3306"  # Different port to avoid conflicts with dev database
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-character-set-client-handshake
+      --init-connect='SET NAMES utf8mb4'
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "test_user", "-ptest_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

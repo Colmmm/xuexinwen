@@ -1,21 +1,31 @@
-# Use an official Python runtime as the base image
-FROM python:3.9
+# Use Python 3.11 slim image
+FROM python:3.11-slim
 
-# Set the working directory
+# Set working directory and create backend directory
 WORKDIR /app
+RUN mkdir -p /app/backend
 
-# Copy the current directory contents into the container
-COPY . /app
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt requirements-test.txt ./
 
-# Make port 5000 available to the world outside this container
-EXPOSE 5000
+# Install Python dependencies including test dependencies
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-test.txt
 
-# Define environment variable
-ENV NAME World
+# Copy the rest of the application
+COPY . .
 
-# Command to start an interactive shell
-CMD ["python"]
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
+# Default command to run tests
+ENTRYPOINT ["python", "-m", "pytest"]
+CMD ["tests/", "-v"]
