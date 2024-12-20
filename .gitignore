@@ -31,3 +31,6 @@ backend/notebooks/
 __pycache__/
 *.py[cod]
 *$py.class
+
+
+*.old

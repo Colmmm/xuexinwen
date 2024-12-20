@@ -20,7 +20,7 @@ services:
     depends_on:
       mysql_test:
         condition: service_healthy
-    command: ["tests/", "-v"]
+    command: ["pytest", "backend/tests/", "-v"]
 
   mysql_test:
     image: mysql:8.0

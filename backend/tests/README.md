@@ -32,27 +32,27 @@ The test environment is containerized using Docker to ensure consistency and iso
 
 ```bash
 # Run all tests
-docker-compose -f docker-compose.test.yml up --build
+docker compose -f docker-compose.test.yml up --build
 
 # Run tests with output and exit
-docker-compose -f docker-compose.test.yml up --build --exit-code-from backend_test
+docker compose -f docker-compose.test.yml up --build --exit-code-from backend_test
 
 # Run specific test categories
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/ -m unit
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/ -m db
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/ -m llm
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/ -m "not slow"
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/ -m db_write
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/ -m db_read
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/ -m unit
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/ -m db
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/ -m llm
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/ -m "not slow"
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/ -m db_write
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/ -m db_read
 
 # Run specific test files
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/test_article.py
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/test_integration.py -v
 
 # Run specific test
-docker-compose -f docker-compose.test.yml run --rm backend_test pytest tests/test_article.py::test_article_creation
+docker compose -f docker-compose.test.yml run --rm backend_test pytest backend/tests/test_article.py::test_article_creation -v
 
 # Clean up test containers
-docker-compose -f docker-compose.test.yml down
+docker compose -f docker-compose.test.yml down
 ```
 
 ### Running Tests Locally (Alternative):
@@ -68,12 +68,12 @@ Then you can run tests using:
 pytest backend/tests/
 
 # Run specific categories
-pytest -m unit
-pytest -m db
-pytest -m llm
-pytest -m "not slow"
-pytest -m db_write
-pytest -m db_read
+pytest -m unit backend/tests/
+pytest -m db backend/tests/
+pytest -m llm backend/tests/
+pytest -m "not slow" backend/tests/
+pytest -m db_write backend/tests/
+pytest -m db_read backend/tests/
 
 # Run specific files/tests
 pytest backend/tests/test_article.py

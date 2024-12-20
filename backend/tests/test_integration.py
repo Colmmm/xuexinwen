@@ -73,16 +73,22 @@ def sample_article():
         metadata=None
     )
 
+@pytest.fixture
+def mock_article_processor(mock_tocfl_data):
+    """Create an ArticleProcessor with mocked dependencies."""
+    with patch('backend.preprocessing.tocfl_tagger.TOCFLTagger') as mock_tagger:
+        # Configure the mock tagger to use our mock data
+        mock_tagger.return_value.df = mock_tocfl_data
+        # Return processor with any path (it will be mocked)
+        return ArticleProcessor(tocfl_csv_path="backend/assets/official_tocfl_list_processed.csv")
+
 @pytest.mark.db
 @pytest.mark.llm
 @pytest.mark.slow
-def test_complete_article_processing(mock_llm_client, mock_tocfl_data, sample_article):
+def test_complete_article_processing(mock_llm_client, mock_article_processor, sample_article):
     """Test complete article processing pipeline."""
-    # Initialize processor
-    processor = ArticleProcessor(tocfl_csv_path="dummy/path.csv")
-    
     # Process article
-    result = processor.process_article(sample_article, simplify=True)
+    result = mock_article_processor.process_article(sample_article, simplify=True)
     
     # Verify structure of result
     assert "html_versions" in result
@@ -111,16 +117,13 @@ def test_complete_article_processing(mock_llm_client, mock_tocfl_data, sample_ar
 
 @pytest.mark.db
 @pytest.mark.llm
-def test_error_recovery(mock_llm_client, mock_tocfl_data, sample_article):
+def test_error_recovery(mock_llm_client, mock_article_processor, sample_article):
     """Test pipeline recovery from component failures."""
     # Make entity extraction fail
     mock_llm_client.extract_entities.side_effect = Exception("Entity extraction failed")
     
-    # Initialize processor
-    processor = ArticleProcessor(tocfl_csv_path="dummy/path.csv")
-    
     # Process should continue with empty entities
-    result = processor.process_article(sample_article)
+    result = mock_article_processor.process_article(sample_article)
     
     # Verify basic processing still worked
     assert "html_versions" in result
@@ -133,7 +136,7 @@ def test_error_recovery(mock_llm_client, mock_tocfl_data, sample_article):
 
 @pytest.mark.db
 @pytest.mark.llm
-def test_empty_article_processing(mock_llm_client, mock_tocfl_data):
+def test_empty_article_processing(mock_llm_client, mock_article_processor):
     """Test processing of empty article."""
     empty_article = Article(
         article_id="empty123",
@@ -151,11 +154,8 @@ def test_empty_article_processing(mock_llm_client, mock_tocfl_data):
         metadata=None
     )
     
-    # Initialize processor
-    processor = ArticleProcessor(tocfl_csv_path="dummy/path.csv")
-    
     # Process empty article
-    result = processor.process_article(empty_article)
+    result = mock_article_processor.process_article(empty_article)
     
     # Verify result structure is maintained
     assert "html_versions" in result
