@@ -27,4 +27,7 @@ dist-ssr
 xuexinwen.env
 backend/notebooks/
 *.sql
-backend/__pycache__/
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
