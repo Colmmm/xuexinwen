@@ -1,28 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from datetime import datetime
-
-@dataclass
-class ArticleSection:
-    """
-    Represents a section (paragraph) of an article with its translations and graded versions.
-    
-    Attributes:
-        mandarin: Original text in Mandarin Chinese
-        english: English translation of the text
-        graded: Dictionary containing graded versions at different difficulty levels
-                Keys: 'BEGINNER', 'INTERMEDIATE'
-                Values: graded text at each level
-    """
-    mandarin: str
-    english: str
-    graded: Dict[str, str] = None  # Key: difficulty level, Value: graded text
-
-    def add_graded_version(self, level: str, text: str) -> None:
-        """Add a graded version of this section at specified difficulty level."""
-        if self.graded is None:
-            self.graded = {}
-        self.graded[level] = text
 
 @dataclass
 class Article:
@@ -39,7 +17,10 @@ class Article:
         mandarin_title: Article title in Mandarin Chinese
         english_title: Article title in English
         
-        sections: List of ArticleSection objects containing the article content
+        mandarin_content: Full article content in Mandarin Chinese
+        english_content: Full article content in English
+        section_indices: List of (start, end) indices marking section boundaries
+        graded_content: Dictionary containing graded versions at different difficulty levels
         
         metadata: Additional metadata about the article
     """
@@ -50,20 +31,32 @@ class Article:
     authors: List[str]
     mandarin_title: str
     english_title: str
-    sections: List[ArticleSection]
+    mandarin_content: str
+    english_content: str
+    section_indices: List[Tuple[int, int]]  # List of (start, end) indices for sections
     image_url: Optional[str]
+    graded_content: Dict[str, str] = None  # Key: difficulty level, Value: graded text
     metadata: Dict = None
-    
-    @property
-    def mandarin_content(self) -> str:
-        """Get full article content in Mandarin Chinese."""
-        return "\n\n".join(section.mandarin for section in self.sections)
-    
-    @property
-    def english_content(self) -> str:
-        """Get full article content in English."""
-        return "\n\n".join(section.english for section in self.sections)
-    
+
+    def get_section_content(self, index: int) -> Tuple[str, str]:
+        """
+        Get content for a specific section.
+        
+        Args:
+            index: Index of the section to retrieve
+            
+        Returns:
+            tuple: (mandarin_text, english_text) for the section
+        """
+        if index >= len(self.section_indices):
+            raise IndexError(f"Section index {index} out of range")
+            
+        start, end = self.section_indices[index]
+        return (
+            self.mandarin_content[start:end].strip(),
+            self.english_content[start:end].strip()
+        )
+
     def get_graded_content(self, level: str) -> Optional[str]:
         """
         Get full article content at specified difficulty level.
@@ -77,11 +70,20 @@ class Article:
         if level == 'native':
             return self.mandarin_content
             
-        if not all(section.graded and level in section.graded 
-                  for section in self.sections):
-            return None
-        return "\n\n".join(section.graded[level] for section in self.sections)
-    
+        return self.graded_content.get(level) if self.graded_content else None
+
+    def add_graded_version(self, level: str, content: str) -> None:
+        """
+        Add a graded version of the article at specified difficulty level.
+        
+        Args:
+            level: Difficulty level ('BEGINNER', 'INTERMEDIATE')
+            content: Graded content at that level
+        """
+        if self.graded_content is None:
+            self.graded_content = {}
+        self.graded_content[level] = content
+
     def to_dict(self) -> Dict:
         """Convert article to dictionary representation."""
         return {
@@ -92,30 +94,17 @@ class Article:
             'authors': self.authors,
             'mandarin_title': self.mandarin_title,
             'english_title': self.english_title,
+            'mandarin_content': self.mandarin_content,
+            'english_content': self.english_content,
+            'section_indices': self.section_indices,
             'image_url': self.image_url,
-            'sections': [
-                {
-                    'mandarin': section.mandarin,
-                    'english': section.english,
-                    'graded': section.graded
-                }
-                for section in self.sections
-            ],
+            'graded_content': self.graded_content,
             'metadata': self.metadata
         }
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'Article':
         """Create Article instance from dictionary representation."""
-        sections = [
-            ArticleSection(
-                mandarin=section['mandarin'],
-                english=section['english'],
-                graded=section.get('graded')
-            )
-            for section in data['sections']
-        ]
-        
         return cls(
             article_id=data['article_id'],
             url=data['url'],
@@ -124,7 +113,10 @@ class Article:
             authors=data['authors'],
             mandarin_title=data['mandarin_title'],
             english_title=data['english_title'],
-            sections=sections,
+            mandarin_content=data['mandarin_content'],
+            english_content=data['english_content'],
+            section_indices=data['section_indices'],
             image_url=data.get('image_url'),
+            graded_content=data.get('graded_content'),
             metadata=data.get('metadata')
         )

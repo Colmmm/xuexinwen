@@ -1,13 +1,13 @@
 import os
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 import time
 import json
 
-from article import Article, ArticleSection
-from logger_config import setup_logger
+from ..article.article import Article
+from ..utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -27,9 +27,8 @@ class DatabaseManager:
             "charset": "utf8mb4",
             "use_unicode": True,
             "collation": "utf8mb4_unicode_ci",
-            "connect_timeout": 60,  # Increased connection timeout
-            "raise_on_warnings": True,
-            "allow_local_infile": True
+            "connect_timeout": 60,
+            "raise_on_warnings": True
         }
         self._test_connection()
     
@@ -121,7 +120,8 @@ class DatabaseManager:
             result = cursor.fetchone()
             return bool(result['article_exists']), bool(result['is_processed'])
         except Error as e:
-            logger.error(f"Error encountered trying to mark article {article_id} as processed with error {e}")
+            logger.error(f"Error checking article status: {str(e)}")
+            raise e
         finally:
             if cursor:
                 cursor.close()
@@ -135,7 +135,7 @@ class DatabaseManager:
         Args:
             article_id: ID of the article to mark as processed
         """
-        logger.info(f"Marking article {article_id} as being processed.")
+        logger.info(f"Marking article {article_id} as processed.")
         conn = None
         cursor = None
         
@@ -147,47 +147,55 @@ class DatabaseManager:
             """, (article_id,))
             conn.commit()
         except Error as e:
-            logger.error(f"Error encountered trying to mark article {article_id} as processed with error {e}")
+            logger.error(f"Error marking article as processed: {str(e)}")
+            raise e
         finally:
             if cursor:
                 cursor.close()
             if conn:
                 conn.close()
-    
+
     def add_article(self, article: Article, processed: bool = False) -> None:
         """
-        Add a new article to the database.
+        Add or update an article and its related data.
         
         Args:
-            article: Article to add
+            article: Article to add/update
             processed: Whether the article has been processed
         """
-        logger.info(f"Attempting to add article {article.article_id} to database")
+        logger.info(f"Adding/updating article {article.article_id}")
         conn = None
         cursor = None
         
         try:
             conn, cursor = self._get_connection()
-            
-            # Start transaction
             conn.start_transaction()
             
-            # Insert main article data
-            logger.info("Inserting article data...")
+            # Insert/update main article data
             cursor.execute("""
                 INSERT INTO articles (
-                    article_id, url, date, source,
-                    mandarin_title, english_title, image_url, metadata, processed
+                    article_id, url, date, source, authors,
+                    mandarin_title, english_title,
+                    mandarin_content, english_content,
+                    section_indices, image_url, metadata,
+                    processed
                 ) VALUES (
-                    %(article_id)s, %(url)s, %(date)s, %(source)s,
-                    %(mandarin_title)s, %(english_title)s, %(image_url)s, %(metadata)s, %(processed)s
+                    %(article_id)s, %(url)s, %(date)s, %(source)s, %(authors)s,
+                    %(mandarin_title)s, %(english_title)s,
+                    %(mandarin_content)s, %(english_content)s,
+                    %(section_indices)s, %(image_url)s, %(metadata)s,
+                    %(processed)s
                 ) AS new_article
                 ON DUPLICATE KEY UPDATE
                     url=new_article.url,
                     date=new_article.date,
                     source=new_article.source,
+                    authors=new_article.authors,
                     mandarin_title=new_article.mandarin_title,
                     english_title=new_article.english_title,
+                    mandarin_content=new_article.mandarin_content,
+                    english_content=new_article.english_content,
+                    section_indices=new_article.section_indices,
                     image_url=new_article.image_url,
                     metadata=new_article.metadata,
                     processed=new_article.processed
@@ -196,81 +204,106 @@ class DatabaseManager:
                 'url': article.url,
                 'date': article.date,
                 'source': article.source,
+                'authors': json.dumps(article.authors),
                 'mandarin_title': article.mandarin_title,
                 'english_title': article.english_title,
+                'mandarin_content': article.mandarin_content,
+                'english_content': article.english_content,
+                'section_indices': json.dumps(article.section_indices),
                 'image_url': article.image_url,
                 'metadata': json.dumps(article.metadata) if article.metadata else None,
                 'processed': processed
             })
+            
             conn.commit()
-            
-            # Clear existing authors and insert new ones
-            logger.info("Updating authors...")
-            cursor.execute("""
-                DELETE FROM authors WHERE article_id = %s
-            """, (article.article_id,))
-            conn.commit()
-            
-            if article.authors:
-                for author in article.authors:
-                    cursor.execute("""
-                        INSERT INTO authors (article_id, author)
-                        VALUES (%s, %s)
-                    """, (article.article_id, author))
-                conn.commit()
-            
-            # Clear existing sections and graded versions
-            logger.info("Updating sections...")
-            cursor.execute("""
-                DELETE s FROM sections s
-                WHERE s.article_id = %s
-            """, (article.article_id,))
-            conn.commit()
-            
-            # Insert new sections with their graded versions
-            for position, section in enumerate(article.sections):
-                cursor.execute("""
-                    INSERT INTO sections (
-                        article_id, position, mandarin, english
-                    ) VALUES (
-                        %(article_id)s, %(position)s, %(mandarin)s, %(english)s
-                    )
-                """, {
-                    'article_id': article.article_id,
-                    'position': position,
-                    'mandarin': section.mandarin,
-                    'english': section.english
-                })
-                section_id = cursor.lastrowid
-                conn.commit()
-                
-                # Insert graded versions if they exist
-                if section.graded:
-                    for level, content in section.graded.items():
-                        cursor.execute("""
-                            INSERT INTO graded_sections (
-                                section_id, cefr_level, content
-                            ) VALUES (%s, %s, %s)
-                        """, (section_id, level, content))
-                        conn.commit()
-            
-            logger.info(f"Successfully saved article {article.article_id} to database")
+            logger.info(f"Successfully saved article {article.article_id}")
             
         except Error as e:
             if conn:
                 conn.rollback()
-            logger.error(f"Error saving article to database: {str(e)}", exc_info=True)
+            logger.error(f"Error saving article: {str(e)}", exc_info=True)
             raise e
-            
         finally:
             if cursor:
                 cursor.close()
             if conn:
                 conn.close()
-    
+
+    def save_processing_results(self, article_id: str,
+                              entities: Dict[str, Dict[str, str]],
+                              word_levels: Dict[str, List[str]],
+                              graded_content: Dict[str, str]) -> None:
+        """
+        Save article processing results and mark article as processed.
+        
+        Args:
+            article_id: ID of the processed article
+            entities: Dictionary of entity types to {word: definition} mappings
+            word_levels: Dictionary of CEFR levels to word lists
+            graded_content: Dictionary of CEFR levels to simplified content
+        """
+        logger.info(f"Saving processing results for article {article_id}")
+        conn = None
+        cursor = None
+        
+        try:
+            conn, cursor = self._get_connection()
+            conn.start_transaction()
+            
+            # Clear existing results
+            cursor.execute("DELETE FROM entities WHERE article_id = %s", (article_id,))
+            cursor.execute("DELETE FROM word_levels WHERE article_id = %s", (article_id,))
+            cursor.execute("DELETE FROM graded_content WHERE article_id = %s", (article_id,))
+            
+            # Save entities
+            for entity_type, entities_dict in entities.items():
+                for word, definition in entities_dict.items():
+                    cursor.execute("""
+                        INSERT INTO entities (
+                            article_id, entity_text, entity_type, english_definition
+                        ) VALUES (%s, %s, %s, %s)
+                    """, (article_id, word, entity_type, definition))
+            
+            # Save word levels
+            for level, words in word_levels.items():
+                for word in words:
+                    cursor.execute("""
+                        INSERT INTO word_levels (
+                            article_id, word, cefr_level
+                        ) VALUES (%s, %s, %s)
+                    """, (article_id, word, level))
+            
+            # Save graded content
+            for level, content in graded_content.items():
+                cursor.execute("""
+                    INSERT INTO graded_content (
+                        article_id, cefr_level, content
+                    ) VALUES (%s, %s, %s)
+                """, (article_id, level, content))
+            
+            # Mark article as processed
+            cursor.execute("""
+                UPDATE articles SET processed = TRUE
+                WHERE article_id = %s
+            """, (article_id,))
+            
+            conn.commit()
+            logger.info(f"Successfully saved processing results for article {article_id}")
+            
+        except Error as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Error saving processing results: {str(e)}", exc_info=True)
+            raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
     def get_article(self, article_id: str) -> Optional[Article]:
         """
-        Retrieve an article from the database.
+        Retrieve an article and its related data.
         
         Args:
             article_id: ID of the article to retrieve
@@ -291,84 +324,48 @@ class DatabaseManager:
             article_data = cursor.fetchone()
             
             if not article_data:
-                logger.warning(f"Article {article_id} not found in database")
+                logger.warning(f"Article {article_id} not found")
                 return None
             
-            # Get authors
+            # Get graded content
             cursor.execute("""
-                SELECT author FROM authors WHERE article_id = %s
+                SELECT cefr_level, content
+                FROM graded_content
+                WHERE article_id = %s
             """, (article_id,))
-            authors = [row['author'] for row in cursor.fetchall()]
+            graded_content = {
+                row['cefr_level']: row['content']
+                for row in cursor.fetchall()
+            }
             
-            # Get sections with their graded versions
-            cursor.execute("""
-                SELECT s.section_id, s.mandarin, s.english,
-                       g.cefr_level, g.content as graded_content
-                FROM sections s
-                LEFT JOIN graded_sections g ON s.section_id = g.section_id
-                WHERE s.article_id = %s
-                ORDER BY s.position
-            """, (article_id,))
-            
-            # Group sections and their graded versions
-            sections = []
-            current_section = None
-            current_graded = {}
-            
-            for row in cursor.fetchall():
-                if not current_section or current_section['section_id'] != row['section_id']:
-                    if current_section:
-                        sections.append(ArticleSection(
-                            mandarin=current_section['mandarin'],
-                            english=current_section['english'],
-                            graded=current_graded if current_graded else None
-                        ))
-                        current_graded = {}
-                    
-                    current_section = row
-                
-                if row['cefr_level']:
-                    current_graded[row['cefr_level']] = row['graded_content']
-            
-            # Add last section
-            if current_section:
-                sections.append(ArticleSection(
-                    mandarin=current_section['mandarin'],
-                    english=current_section['english'],
-                    graded=current_graded if current_graded else None
-                ))
-            
-            # Parse metadata from JSON if it exists
-            metadata = json.loads(article_data['metadata']) if article_data['metadata'] else None
-            
-            # Create and return Article instance
+            # Create Article instance
             return Article(
                 article_id=article_data['article_id'],
                 url=article_data['url'],
                 date=article_data['date'],
                 source=article_data['source'],
-                authors=authors,
+                authors=json.loads(article_data['authors']),
                 mandarin_title=article_data['mandarin_title'],
                 english_title=article_data['english_title'],
-                sections=sections,
+                mandarin_content=article_data['mandarin_content'],
+                english_content=article_data['english_content'],
+                section_indices=json.loads(article_data['section_indices']),
                 image_url=article_data['image_url'],
-                metadata=metadata
+                graded_content=graded_content if graded_content else None,
+                metadata=json.loads(article_data['metadata']) if article_data['metadata'] else None
             )
             
         except Error as e:
-            logger.error(f"Error retrieving article {article_id}: {str(e)}", exc_info=True)
+            logger.error(f"Error retrieving article: {str(e)}", exc_info=True)
             raise e
-            
         finally:
             if cursor:
                 cursor.close()
             if conn:
                 conn.close()
-    
-    def get_articles(self, 
-                    source: Optional[str] = None,
-                    limit: int = 10,
-                    offset: int = 0) -> List[Article]:
+
+    def get_articles(self, source: Optional[str] = None,
+                    limit: int = 10, offset: int = 0) -> List[Article]:
         """
         Retrieve multiple articles with optional filtering.
         
@@ -407,13 +404,77 @@ class DatabaseManager:
                 if article_id
             ]
             
-            logger.info(f"Retrieved {len(articles)} articles from database")
+            logger.info(f"Retrieved {len(articles)} articles")
             return articles
             
         except Error as e:
             logger.error(f"Error retrieving articles: {str(e)}", exc_info=True)
             raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def get_processing_results(self, article_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve processing results for an article.
+        
+        Args:
+            article_id: ID of the article
             
+        Returns:
+            Dictionary containing entities, word levels, and graded content
+        """
+        conn = None
+        cursor = None
+        
+        try:
+            conn, cursor = self._get_connection()
+            
+            # Get entities
+            cursor.execute("""
+                SELECT entity_text, entity_type, english_definition
+                FROM entities WHERE article_id = %s
+            """, (article_id,))
+            entities = {}
+            for row in cursor.fetchall():
+                entity_type = row['entity_type']
+                if entity_type not in entities:
+                    entities[entity_type] = {}
+                entities[entity_type][row['entity_text']] = row['english_definition']
+            
+            # Get word levels
+            cursor.execute("""
+                SELECT word, cefr_level
+                FROM word_levels WHERE article_id = %s
+            """, (article_id,))
+            word_levels = {}
+            for row in cursor.fetchall():
+                level = row['cefr_level']
+                if level not in word_levels:
+                    word_levels[level] = []
+                word_levels[level].append(row['word'])
+            
+            # Get graded content
+            cursor.execute("""
+                SELECT cefr_level, content
+                FROM graded_content WHERE article_id = %s
+            """, (article_id,))
+            graded_content = {
+                row['cefr_level']: row['content']
+                for row in cursor.fetchall()
+            }
+            
+            return {
+                'entities': entities,
+                'word_levels': word_levels,
+                'graded_content': graded_content
+            }
+            
+        except Error as e:
+            logger.error(f"Error retrieving processing results: {str(e)}", exc_info=True)
+            raise e
         finally:
             if cursor:
                 cursor.close()

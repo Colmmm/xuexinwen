@@ -6,11 +6,11 @@ from datetime import datetime
 from enum import Enum
 import os
 
-from article import Article
-from fetch_articles import fetch_articles, generate_article_id
-from processing_articles import ArticleProcessor
-from db_manager import DatabaseManager
-from logger_config import setup_logger
+from ..article.article import Article
+from ..article.article_processor import ArticleProcessor
+from ..fetching.fetch_articles import fetch_articles
+from ..database.db_manager import DatabaseManager
+from ..utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -40,8 +40,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize components
 db = DatabaseManager()
-processor = ArticleProcessor()
+processor = ArticleProcessor(tocfl_csv_path="backend/assets/official_tocfl_list_processed.csv")
 
 # Enums for validation
 class GradeLevel(str, Enum):
@@ -50,14 +51,6 @@ class GradeLevel(str, Enum):
     NATIVE = "native"
 
 # Pydantic models for API responses
-class ArticleSection(BaseModel):
-    mandarin: str
-    english: str
-    graded: Optional[Dict[str, str]] = None
-    
-    class Config:
-        from_attributes = True
-
 class ArticleResponse(BaseModel):
     article_id: str
     url: str
@@ -66,14 +59,17 @@ class ArticleResponse(BaseModel):
     authors: List[str]
     mandarin_title: str
     english_title: str
-    sections: List[ArticleSection]
+    mandarin_content: str
+    english_content: str
+    section_indices: List[tuple]
     image_url: Optional[str] = None
+    graded_content: Optional[Dict[str, str]] = None
     metadata: Optional[Dict] = None
     
     class Config:
         from_attributes = True
 
-class GradedArticleResponse(BaseModel):
+class ProcessedArticleResponse(BaseModel):
     article_id: str
     url: str
     date: datetime
@@ -81,13 +77,13 @@ class GradedArticleResponse(BaseModel):
     authors: List[str]
     mandarin_title: str
     english_title: str
-    graded_content: str
-    english_content: str
+    html_versions: Dict[str, str]  # Level -> HTML content mapping
+    entities: Dict[str, Dict[str, str]]  # Entity type -> {word: definition}
+    word_levels: Dict[str, List[str]]  # CEFR level -> word list
     image_url: Optional[str] = None
     metadata: Optional[Dict] = None
 
 @app.get("/api/articles", response_model=List[ArticleResponse])
-@app.get("/api/articles/", response_model=List[ArticleResponse])
 async def get_articles(
     source: Optional[str] = None,
     limit: int = Query(default=10, le=100),
@@ -110,10 +106,12 @@ async def get_articles(
             detail=f"Error retrieving articles: {str(e)}"
         )
 
-@app.get("/api/articles/{article_id}", response_model=ArticleResponse)
+@app.get("/api/articles/{article_id}", response_model=ProcessedArticleResponse)
 async def get_article(article_id: str):
-    """Get metadata and content for a specific article."""
+    """Get processed article content with HTML wrapping and analysis."""
     logger.info(f"Fetching article: {article_id}")
+    
+    # Get the article
     article = db.get_article(article_id)
     if not article:
         logger.warning(f"Article not found: {article_id}")
@@ -121,10 +119,34 @@ async def get_article(article_id: str):
             status_code=404,
             detail="Article not found"
         )
-    logger.info(f"Successfully retrieved article: {article_id}")
-    return article
+    
+    # Process the article if not already processed
+    try:
+        processed = processor.process_article(article)
+        logger.info(f"Successfully processed article: {article_id}")
+        
+        return {
+            "article_id": article.article_id,
+            "url": article.url,
+            "date": article.date,
+            "source": article.source,
+            "authors": article.authors,
+            "mandarin_title": article.mandarin_title,
+            "english_title": article.english_title,
+            "html_versions": processed['html_versions'],
+            "entities": processed['entities'],
+            "word_levels": processed['word_levels'],
+            "image_url": article.image_url,
+            "metadata": article.metadata
+        }
+    except Exception as e:
+        logger.error(f"Error processing article {article_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing article: {str(e)}"
+        )
 
-@app.get("/api/articles/{article_id}/grade/{level}", response_model=GradedArticleResponse)
+@app.get("/api/articles/{article_id}/grade/{level}", response_model=ProcessedArticleResponse)
 async def get_graded_article(
     article_id: str,
     level: GradeLevel
@@ -137,6 +159,8 @@ async def get_graded_article(
         level: The grade level (BEGINNER, INTERMEDIATE, or native)
     """
     logger.info(f"Fetching graded article: {article_id}, level: {level}")
+    
+    # Get and process the article
     article = db.get_article(article_id)
     if not article:
         logger.warning(f"Article not found: {article_id}")
@@ -145,37 +169,18 @@ async def get_graded_article(
             detail="Article not found"
         )
     
-    if level == GradeLevel.NATIVE:
-        # Return native (original) version
-        logger.info(f"Returning native version of article: {article_id}")
-        return {
-            "article_id": article.article_id,
-            "url": article.url,
-            "date": article.date,
-            "source": article.source,
-            "authors": article.authors,
-            "mandarin_title": article.mandarin_title,
-            "english_title": article.english_title,
-            "graded_content": "\n\n".join(s.mandarin for s in article.sections),
-            "english_content": "\n\n".join(s.english for s in article.sections),
-            "image_url": article.image_url,
-            "metadata": article.metadata
-        }
-    else:
-        # Check if any sections have the requested level
-        graded_sections = [
-            s.graded[level.value] if s.graded and level.value in s.graded else s.mandarin
-            for s in article.sections
-        ]
+    try:
+        processed = processor.process_article(article)
         
-        if not any(s.graded and level.value in s.graded for s in article.sections):
-            logger.warning(f"Graded version not available for {level.value} level in article: {article_id}")
+        # Check if the requested level exists
+        if level.value not in processed['html_versions']:
+            logger.warning(f"Level {level.value} not available for article: {article_id}")
             raise HTTPException(
                 status_code=404,
-                detail=f"Graded version not available for {level.value.lower()} level"
+                detail=f"Level {level.value} not available for this article"
             )
         
-        logger.info(f"Returning {level.value} version of article: {article_id}")
+        logger.info(f"Successfully retrieved {level.value} version of article: {article_id}")
         return {
             "article_id": article.article_id,
             "url": article.url,
@@ -184,11 +189,18 @@ async def get_graded_article(
             "authors": article.authors,
             "mandarin_title": article.mandarin_title,
             "english_title": article.english_title,
-            "graded_content": "\n\n".join(graded_sections),
-            "english_content": "\n\n".join(s.english for s in article.sections),
+            "html_versions": processed['html_versions'],
+            "entities": processed['entities'],
+            "word_levels": processed['word_levels'],
             "image_url": article.image_url,
             "metadata": article.metadata
         }
+    except Exception as e:
+        logger.error(f"Error processing article {article_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing article: {str(e)}"
+        )
 
 @app.post("/api/articles/fetch")
 async def fetch_new_articles(
@@ -211,10 +223,10 @@ async def fetch_new_articles(
             }
         
         # Queue all articles for processing
-        # process_article now handles all database operations internally
         for article in raw_articles:
             logger.info(f"Queueing article for processing: {article.article_id}")
             background_tasks.add_task(processor.process_article, article)
+            background_tasks.add_task(db.save_article, article)
         
         logger.info(f"Started processing {len(raw_articles)} articles")
         return {
@@ -233,12 +245,12 @@ async def reprocess_article(
     background_tasks: BackgroundTasks
 ):
     """
-    Reprocess an existing article to generate new graded versions.
+    Reprocess an existing article to generate new analysis and graded versions.
     Processing happens in the background.
     """
     logger.info(f"Requesting reprocess of article: {article_id}")
     
-    # Get the article - if it doesn't exist, this will return None
+    # Get the article
     article = db.get_article(article_id)
     if not article:
         logger.warning(f"Article not found for reprocessing: {article_id}")
@@ -247,10 +259,23 @@ async def reprocess_article(
             detail="Article not found"
         )
     
-    logger.info(f"Queueing article for reprocessing: {article_id}")
-    # Force reprocessing even if already processed
-    background_tasks.add_task(processor.process_article, article, force=True)
-    
-    return {
-        "message": f"Started reprocessing article {article_id}"
-    }
+    try:
+        # Process immediately to catch any errors
+        processed = processor.process_article(article)
+        
+        # Save the processed article
+        background_tasks.add_task(db.save_article, article)
+        
+        logger.info(f"Successfully reprocessed article: {article_id}")
+        return {
+            "message": f"Successfully reprocessed article {article_id}",
+            "html_versions": processed['html_versions'],
+            "entities": processed['entities'],
+            "word_levels": processed['word_levels']
+        }
+    except Exception as e:
+        logger.error(f"Error reprocessing article {article_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reprocessing article: {str(e)}"
+        )
