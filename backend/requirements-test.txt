@@ -1,0 +1,35 @@
+# Core testing packages
+pytest==7.4.3
+pytest-asyncio==0.21.1  # For testing async code
+pytest-cov==4.1.0       # For test coverage reporting
+pytest-mock==3.12.0     # For mocking
+pytest-env==1.0.1       # For environment variable management
+pytest-xdist==3.3.1     # For parallel test execution
+pytest-timeout==2.2.0   # For test timeouts
+
+# Testing utilities
+coverage==7.3.2         # Code coverage measurement
+hypothesis==6.87.1      # Property-based testing
+freezegun==1.2.2       # For datetime mocking
+
+# Development tools
+black==23.10.1         # Code formatting
+flake8==6.1.0          # Code linting
+mypy==1.6.1           # Static type checking
+isort==5.12.0         # Import sorting
+
+# Project dependencies (for testing)
+pandas>=2.1.0
+jieba>=0.42.1
+fastapi>=0.104.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+mysql-connector-python>=8.1.0  # MySQL Python connector
+SQLAlchemy>=2.0.0            # SQL ORM
+testing.mysqld>=1.4.0        # MySQL test server
+
+# Type stubs for better type checking
+types-requests>=2.31.0.10
+types-python-dateutil>=2.8.19.14
+pandas-stubs>=2.1.1.230928
+types-SQLAlchemy>=1.4.53.38
