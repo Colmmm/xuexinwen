@@ -19,7 +19,8 @@ class Article:
         
         mandarin_content: Full article content in Mandarin Chinese
         english_content: Full article content in English
-        section_indices: List of (start, end) indices marking section boundaries
+        mandarin_section_indices: List of (start, end) indices marking mandarin section boundaries
+        english_section_indices: List of (start, end) indices marking english section boundaries
         graded_content: Dictionary containing graded versions at different difficulty levels
         
         metadata: Additional metadata about the article
@@ -33,7 +34,8 @@ class Article:
     english_title: str
     mandarin_content: str
     english_content: str
-    section_indices: List[Tuple[int, int]]  # List of (start, end) indices for sections
+    mandarin_section_indices: List[Tuple[int, int]]  # List of (start, end) indices for mandarin sections
+    english_section_indices: List[Tuple[int, int]]  # List of (start, end) indices for english sections
     image_url: Optional[str]
     graded_content: Dict[str, str] = None  # Key: difficulty level, Value: graded text
     metadata: Dict = None
@@ -48,13 +50,14 @@ class Article:
         Returns:
             tuple: (mandarin_text, english_text) for the section
         """
-        if index >= len(self.section_indices):
+        if index >= len(self.mandarin_section_indices) or index >= len(self.english_section_indices):
             raise IndexError(f"Section index {index} out of range")
             
-        start, end = self.section_indices[index]
+        m_start, m_end = self.mandarin_section_indices[index]
+        e_start, e_end = self.english_section_indices[index]
         return (
-            self.mandarin_content[start:end].strip(),
-            self.english_content[start:end].strip()
+            self.mandarin_content[m_start:m_end].strip(),
+            self.english_content[e_start:e_end].strip()
         )
 
     def get_graded_content(self, level: str) -> Optional[str]:
@@ -96,7 +99,8 @@ class Article:
             'english_title': self.english_title,
             'mandarin_content': self.mandarin_content,
             'english_content': self.english_content,
-            'section_indices': self.section_indices,
+            'mandarin_section_indices': self.mandarin_section_indices,
+            'english_section_indices': self.english_section_indices,
             'image_url': self.image_url,
             'graded_content': self.graded_content,
             'metadata': self.metadata
@@ -115,7 +119,8 @@ class Article:
             english_title=data['english_title'],
             mandarin_content=data['mandarin_content'],
             english_content=data['english_content'],
-            section_indices=data['section_indices'],
+            mandarin_section_indices=data['mandarin_section_indices'],
+            english_section_indices=data['english_section_indices'],
             image_url=data.get('image_url'),
             graded_content=data.get('graded_content'),
             metadata=data.get('metadata')
