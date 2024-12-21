@@ -44,7 +44,8 @@ def sample_article():
         english_title="Tesla Announces New AI System",
         mandarin_content="马斯克在硅谷宣布特斯拉的最新人工智能系统。这项技术将改变自动驾驶的未来。",
         english_content="Elon Musk announces Tesla's latest AI system in Silicon Valley. This technology will transform the future of autonomous driving.",
-        section_indices=[(0, 19), (19, 33)],
+        mandarin_section_indices=[(0, 36)],
+        english_section_indices=[(0, 128)],
         image_url=None,
         graded_content=None,
         metadata=None
