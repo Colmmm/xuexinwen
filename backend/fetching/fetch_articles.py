@@ -2,9 +2,9 @@ from typing import List, Dict, Callable
 import hashlib
 from datetime import datetime
 
-from article import Article, ArticleSection
-from nyt_fetch_articles import nyt_fetch_articles
-from logger_config import setup_logger
+from backend.article.article import Article
+from backend.fetching.nyt_fetch_articles import nyt_fetch_articles
+from backend.utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -26,13 +26,29 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
     logger.info(f"Processing article: {raw_data.get('url', 'No URL')}")
     logger.debug(f"Raw data keys: {raw_data.keys()}")
     
-    # Create ArticleSection instances from parallel texts
-    sections = []
+    # Convert paragraphs into full content strings
+    mandarin_content = "\n".join(raw_data['mandarin_paragraphs'])
+    english_content = "\n".join(raw_data['english_paragraphs'])
+    
+    # Generate section indices
+    mandarin_section_indices = []
+    english_section_indices = []
+    
+    mandarin_pos = 0
+    english_pos = 0
+    
     for mand, eng in zip(raw_data['mandarin_paragraphs'], raw_data['english_paragraphs']):
-        sections.append(ArticleSection(
-            mandarin=mand,
-            english=eng
-        ))
+        # Add indices for this paragraph
+        mand_end = mandarin_pos + len(mand)
+        eng_end = english_pos + len(eng)
+        
+        mandarin_section_indices.append((mandarin_pos, mand_end))
+        english_section_indices.append((english_pos, eng_end))
+        
+        # Update positions for next paragraph
+        # Add 1 for the newline character we added when joining paragraphs
+        mandarin_pos = mand_end + 1
+        english_pos = eng_end + 1
     
     # Convert date string to datetime if needed
     if isinstance(raw_data['date'], str):
@@ -59,8 +75,13 @@ def create_article_from_raw(raw_data: Dict, source: str) -> Article:
         authors=authors,
         mandarin_title=raw_data['mandarin_title'],
         english_title=raw_data['english_title'],
-        sections=sections,
-        image_url=raw_data.get('image_url')
+        mandarin_content=mandarin_content,
+        english_content=english_content,
+        mandarin_section_indices=mandarin_section_indices,
+        english_section_indices=english_section_indices,
+        image_url=raw_data.get('image_url'),
+        graded_content=None,
+        metadata=None
     )
     logger.info(f"Successfully processed article: {article.english_title}")
     return article
