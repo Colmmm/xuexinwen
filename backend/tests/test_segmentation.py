@@ -21,7 +21,8 @@ def sample_article():
         english_title="New Music App Released",
         mandarin_content="这个新的音乐应用程序今天发布。用户可以免费试用三十天。",
         english_content="The new music app was released today. Users can try it free for thirty days.",
-        section_indices=[(0, 13), (13, 25)],
+        mandarin_section_indices=[(0, 13), (13, 25)],
+        english_section_indices=[(0, 35), (36, 71)],
         image_url=None,
         graded_content={
             "BEGINNER": "这个新的音乐软件今天出来了。大家可以免费用三十天。"
@@ -49,7 +50,7 @@ def test_clean_word():
 
 def test_add_words_to_dictionary(segmenter):
     """Test adding custom words to Jieba dictionary."""
-    custom_words = ["音乐应用程序", "免费试用"]
+    custom_words = ["音乐应用程序", "免费试用", "音乐软件"]
     segmenter.add_words_to_dictionary(custom_words)
     
     # Segment text containing custom words
@@ -78,7 +79,7 @@ def test_segment_text(segmenter):
 def test_segment_article(segmenter, sample_article):
     """Test segmentation of article content."""
     # Add some custom words
-    custom_words = ["音乐应用程序", "免费试用"]
+    custom_words = ["音乐应用程序", "免费试用", "音乐软件"]
     
     # Segment the article
     segmented_versions = segmenter.segment_article(sample_article, custom_words)
@@ -111,9 +112,10 @@ def test_get_sentence_boundaries(segmenter):
     assert boundaries[3] == (15, 19) # Last sentence (no ending punctuation)
     
     # Verify sentence extraction
-    assert text[boundaries[0][0]:boundaries[0][1]].strip() == "第一句话"
-    assert text[boundaries[1][0]:boundaries[1][1]].strip() == "第二句话"
-    assert text[boundaries[2][0]:boundaries[2][1]].strip() == "第三句话"
+    first_sentence = text[boundaries[0][0]:boundaries[0][1]].strip()
+    assert first_sentence == "第一句话。"  # Include the period
+    assert text[boundaries[1][0]:boundaries[1][1]].strip() == "第二句话！"
+    assert text[boundaries[2][0]:boundaries[2][1]].strip() == "第三句话？"
     assert text[boundaries[3][0]:boundaries[3][1]].strip() == "最后一句"
 
 def test_empty_text_segmentation(segmenter):

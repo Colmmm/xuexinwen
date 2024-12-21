@@ -18,10 +18,10 @@ class Segmenter:
         Returns:
             Cleaned word or None if word is only punctuation/whitespace
         """
-        word = word.strip()
-        if re.match(r'^[\s\W]+$', word):
+        cleaned = word.strip()
+        if not cleaned or re.match(r'^[\s\W]+$', cleaned):
             return None
-        return word
+        return cleaned
 
     def add_words_to_dictionary(self, words: List[str], freq: int = 1000):
         """
