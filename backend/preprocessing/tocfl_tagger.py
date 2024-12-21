@@ -76,7 +76,11 @@ class TOCFLTagger:
         if not unknown_words:
             return {}
             
-        return self.llm_client.classify_words(list(unknown_words))
+        try:
+            classifications = self.llm_client.classify_words(list(unknown_words))
+            return classifications if classifications else {}
+        except Exception:
+            return {}
 
     def categorize_words(self, words: List[str]) -> Dict[str, List[str]]:
         """

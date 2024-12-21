@@ -17,8 +17,12 @@ def mock_csv_data():
 @pytest.fixture
 def mock_llm_client():
     """Create a mock LLM client."""
-    with patch('backend.utils.llm_client.LLMClient') as mock:
-        return mock.return_value
+    mock = Mock()
+    mock.classify_words.return_value = {
+        '未知詞一': 'B1',
+        '未知詞二': 'A2'
+    }
+    return mock
 
 @pytest.fixture
 def tocfl_tagger(mock_csv_data, mock_llm_client):
@@ -34,7 +38,9 @@ def tocfl_tagger(mock_csv_data, mock_llm_client):
         ])
         mock_read_csv.return_value = df
         
-        return TOCFLTagger("dummy/path.csv")
+        tagger = TOCFLTagger("dummy/path.csv")
+        tagger.llm_client = mock_llm_client  # Replace the LLM client with our mock
+        return tagger
 
 def test_load_tocfl_dictionary(tocfl_tagger):
     """Test loading and initialization of TOCFL dictionary."""
@@ -68,12 +74,6 @@ def test_create_ordered_dict(tocfl_tagger):
 @pytest.mark.slow
 def test_classify_unknown_words(tocfl_tagger, mock_llm_client):
     """Test classification of unknown words using LLM."""
-    # Mock LLM response
-    mock_llm_client.classify_words.return_value = {
-        '未知詞一': 'B1',
-        '未知詞二': 'A2'
-    }
-    
     # Classify unknown words
     result = tocfl_tagger.classify_unknown_words({'未知詞一', '未知詞二'})
     
@@ -100,12 +100,6 @@ def test_categorize_words(tocfl_tagger, mock_llm_client):
     # Mix of known and unknown words (traditional characters)
     words = ['學習', '餐廳', '未知詞一', '未知詞二', '電腦']
     
-    # Mock LLM response for unknown words
-    mock_llm_client.classify_words.return_value = {
-        '未知詞一': 'B1',
-        '未知詞二': 'A2'
-    }
-    
     # Categorize words
     result = tocfl_tagger.categorize_words(words)
     
@@ -121,12 +115,6 @@ def test_get_word_level_map(tocfl_tagger, mock_llm_client):
     """Test creation of word to level mapping."""
     # Mix of traditional and simplified characters
     words = ['學習', '餐厅', '未知詞一', '未知詞二', '電腦']
-    
-    # Mock LLM response for unknown words
-    mock_llm_client.classify_words.return_value = {
-        '未知詞一': 'B1',
-        '未知詞二': 'A2'
-    }
     
     # Get word level mapping
     result = tocfl_tagger.get_word_level_map(words)
