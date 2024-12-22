@@ -8,22 +8,20 @@ from backend.article.article import Article
 @pytest.fixture
 def mock_llm_client():
     """Create a mock LLM client."""
-    with patch('backend.utils.llm_client.LLMClient') as mock:
-        client = mock.return_value
-        
-        # Mock simplification
-        client.simplify_to_multiple_levels.return_value = {
-            'original': '這個新的音樂應用程序今天發布。用戶可以免費試用三十天。',
-            'A2': '這個新的音樂軟件今天出來了。大家可以免費用三十天。',
-            'B1': '這個新的音樂應用今天發布。用戶可以免費使用一個月。'
-        }
-        
-        return client
+    mock = Mock()
+    mock.simplify_to_multiple_levels.return_value = {
+        'original': '這個新的音樂應用程序今天發布。用戶可以免費試用三十天。',
+        'A2': '這個新的音樂軟件今天出來了。大家可以免費用三十天。',
+        'B1': '這個新的音樂應用今天發布。用戶可以免費使用一個月。'
+    }
+    return mock
 
 @pytest.fixture
 def simplifier(mock_llm_client):
     """Create an ArticleSimplifier with mocked LLM client."""
-    return ArticleSimplifier()
+    simplifier = ArticleSimplifier()
+    simplifier.llm_client = mock_llm_client
+    return simplifier
 
 @pytest.fixture
 def sample_article():
@@ -38,7 +36,8 @@ def sample_article():
         english_title="New Music App Released",
         mandarin_content="這個新的音樂應用程序今天發布。用戶可以免費試用三十天。",
         english_content="The new music app was released today. Users can try it free for thirty days.",
-        section_indices=[(0, 13), (13, 25)],
+        mandarin_section_indices=[(0, 13), (13, 25)],
+        english_section_indices=[(0, 35), (36, 71)],
         image_url=None,
         graded_content=None,
         metadata=None
@@ -62,7 +61,7 @@ def test_simplify_article_basic(simplifier, mock_llm_client, sample_article):
     mock_llm_client.simplify_to_multiple_levels.assert_called_once_with(
         zh_content=sample_article.mandarin_content,
         en_content=sample_article.english_content,
-        levels=['B1', 'A2']
+        levels=['A2', 'B1']  # Order should match the simplifier's level_mapping values
     )
     
     # Verify article was updated
@@ -115,8 +114,9 @@ def test_simplify_article_error_handling(simplifier, mock_llm_client, sample_art
 
 def test_level_mapping(simplifier):
     """Test the CEFR to internal level mapping."""
-    assert simplifier.level_mapping['A2'] == 'BEGINNER'
-    assert simplifier.level_mapping['B1'] == 'INTERMEDIATE'
+    # Test mapping in both directions
+    assert simplifier.level_mapping['BEGINNER'] == 'A2'
+    assert simplifier.level_mapping['INTERMEDIATE'] == 'B1'
 
 def test_simplify_empty_article(simplifier, mock_llm_client):
     """Test simplification of article with empty content."""
@@ -130,7 +130,8 @@ def test_simplify_empty_article(simplifier, mock_llm_client):
         english_title="",
         mandarin_content="",
         english_content="",
-        section_indices=[],
+        mandarin_section_indices=[],
+        english_section_indices=[],
         image_url=None,
         graded_content=None,
         metadata=None

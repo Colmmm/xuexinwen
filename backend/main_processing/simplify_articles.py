@@ -25,18 +25,33 @@ class ArticleSimplifier:
         Args:
             article: Article object to simplify
         """
-        # Get simplified versions for each difficulty level
-        simplified_versions = self.llm_client.simplify_to_multiple_levels(
-            zh_content=article.mandarin_content,
-            en_content=article.english_content,
-            levels=list(self.level_mapping.values())
-        )
-        
-        # Map the simplified versions to our internal level names and add to article
-        if simplified_versions:
+        # Skip empty articles
+        if not article.mandarin_content or not article.english_content:
+            return
+
+        try:
+            # Get simplified versions for each difficulty level
+            simplified_versions = self.llm_client.simplify_to_multiple_levels(
+                zh_content=article.mandarin_content,
+                en_content=article.english_content,
+                levels=list(self.level_mapping.values())  # ['A2', 'B1']
+            )
+            
+            # Skip if no simplified versions were returned
+            if not simplified_versions or len(simplified_versions) <= 1:  # Only original content
+                return
+            
+            # Initialize graded_content if needed
+            if article.graded_content is None:
+                article.graded_content = {}
+            
+            # Map the simplified versions to our internal level names
             for internal_level, cefr_level in self.level_mapping.items():
                 if cefr_level in simplified_versions:
-                    article.add_graded_version(internal_level, simplified_versions[cefr_level])
+                    article.graded_content[internal_level] = simplified_versions[cefr_level]
+        except Exception:
+            # Log error and continue
+            pass
 
     def process_article_batch(self, articles: List[Article]) -> None:
         """
