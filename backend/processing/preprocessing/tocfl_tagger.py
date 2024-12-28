@@ -2,8 +2,8 @@ from typing import Dict, Set, List, Optional
 import pandas as pd
 from collections import OrderedDict
 import jieba
-from ..utils.llm_client import LLMClient
-from ..article.article import Article
+from ...utils.llm_client import LLMClient
+from ...article.article import Article
 
 class TOCFLTagger:
     def __init__(self, tocfl_csv_path: str):

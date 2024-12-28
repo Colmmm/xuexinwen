@@ -1,5 +1,6 @@
 from typing import Dict, List
-from ..utils.llm_client import LLMClient
+from ...utils.llm_client import LLMClient
+from ...article.article import Article
 
 class EntityExtractor:
     def __init__(self):

@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List
-from ..utils.llm_client import LLMClient
-from ..article.article import Article
+from ...utils.llm_client import LLMClient
+from ...article.article import Article
 
 class ArticleSimplifier:
     """

@@ -1,7 +1,7 @@
 from typing import List, Dict, Optional
 import jieba
 import re
-from ..article.article import Article
+from ...article.article import Article
 
 class Segmenter:
     def __init__(self):

@@ -1,12 +1,12 @@
 from typing import Dict, Optional
 import os
 
-from ..preprocessing.entity_extraction import EntityExtractor
-from ..preprocessing.tocfl_tagger import TOCFLTagger
-from ..preprocessing.segmentation import Segmenter
-from ..postprocessing.html_wrapper import HTMLWrapper
-from ..main_processing.simplify_articles import ArticleSimplifier
-from .article import Article
+from preprocessing.entity_extraction import EntityExtractor
+from preprocessing.tocfl_tagger import TOCFLTagger
+from preprocessing.segmentation import Segmenter
+from postprocessing.html_wrapper import HTMLWrapper
+from midprocessing.simplify_articles import ArticleSimplifier
+from ..article.article import Article
 
 class ArticleProcessor:
     def __init__(self, tocfl_csv_path: str):
