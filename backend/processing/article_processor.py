@@ -1,107 +1,60 @@
 from typing import Dict, Optional
 import os
 
-from preprocessing.entity_extraction import EntityExtractor
-from preprocessing.tocfl_tagger import TOCFLTagger
-from preprocessing.segmentation import Segmenter
-from postprocessing.html_wrapper import HTMLWrapper
-from midprocessing.simplify_articles import ArticleSimplifier
-from ..article.article import Article
+from processing_utils.entity_extractor import EntityExtractor
+from processing_utils.segmenter import Segmenter
+from processing_utils.grader import Grader
+from processing_utils.simplifier import Simplifier
+from processing_utils.metadata_manager import WordMetadataManager
+from backend.article.processed_article import ProcessedArticle
+from backend.article.article import Article
 
 class ArticleProcessor:
-    def __init__(self, tocfl_csv_path: str):
-        """
-        Initialize the article processor with necessary components.
-        
-        Args:
-            tocfl_csv_path: Path to the TOCFL CSV dictionary file
-        """
-        # Initialize components
+    def __init__(self):
         self.entity_extractor = EntityExtractor()
-        self.tocfl_tagger = TOCFLTagger(tocfl_csv_path)
         self.segmenter = Segmenter()
-        self.html_wrapper = HTMLWrapper()
-        self.article_simplifier = ArticleSimplifier()
+        self.grader = Grader()
+        self.simplifier = Simplifier()
+        self.word_metadata_manager = WordMetadataManager()
+        
+    def process_article(self, article: Article) -> ProcessedArticle:
+        """
+        Processes an Article object and returns a ProcessedArticle object
+        with segmented content and word metadata.
+        """
+        # Initialize the ProcessedArticle
+        processed_article = ProcessedArticle.from_article(article)
 
-    def process_article(self, article: Article, simplify: bool = True) -> Dict:
-        """
-        Process an article through all stages: entity extraction, segmentation,
-        TOCFL tagging, simplification (optional), and HTML wrapping.
-        
-        Args:
-            article: Article object to process
-            simplify: Whether to create simplified versions
-            
-        Returns:
-            Dictionary containing processed article data:
-            {
-                'html_content': str,  # HTML-wrapped content
-                'entities': {         # Extracted entities by type
-                    'names': {...},
-                    'places': {...},
-                    'organizations': {...},
-                    'misc': {...}
-                },
-                'word_levels': {...}  # Word to CEFR level mapping
-            }
-        """
-        # 1. Extract entities
-        entities = self.entity_extractor.extract_entities(article)
-        
-        # 2. Get all entity words for custom dictionary
-        entity_words = self.entity_extractor.get_all_entities(entities)
-        
-        # 3. Segment all versions of the text, using entities as custom dictionary words
-        segmented_versions = self.segmenter.segment_article(
-            article=article,
-            custom_words=entity_words
-        )
-        
-        # Get the words from the original content for TOCFL tagging
-        words = segmented_versions['native']
-        
-        # 4. Get word level mapping
-        word_level_map = self.tocfl_tagger.get_word_level_map(words)
-        
-        # 5. Create categorized word levels for statistics/analysis
-        word_levels = self.tocfl_tagger.categorize_words(words)
-        
-        # 6. Optionally create simplified versions
-        if simplify:
-            self.article_simplifier.simplify_article(article)
-            
-        # 7. Generate HTML with wrapped words for all versions
-        html_versions = {}
-        for level, segmented_words in segmented_versions.items():
-            html_versions[level] = self.html_wrapper.process_text(
-                words=segmented_words,
-                word_levels=word_level_map,
-                entity_definitions=entities
-            )
-        
-        return {
-            'html_versions': html_versions,
-            'entities': entities,
-            'word_levels': word_levels
-        }
+        # Step 1: Extract Entities
+        entities = self.entity_extractor.extract_entities(article.mandarin_content)
+        processed_article.update_word_metadata(entities)
 
-    def process_batch(self, articles: list[Article], simplify: bool = True) -> list[Dict]:
-        """
-        Process a batch of articles.
-        
-        Args:
-            articles: List of Article objects to process
-            simplify: Whether to create simplified versions
-            
-        Returns:
-            List of processed article data
-        """
-        results = []
-        for article in articles:
-            try:
-                result = self.process_article(article, simplify)
-                results.append(result)
-            except Exception as e:
-                print(f"Error processing article {article.article_id}: {e}")
-                continue
-        return results
+        # Step 2: Segment the Native Content
+        native_segments = self.segmenter.segment_text(article.mandarin_content, custom_words=entities.keys())
+        processed_article.set_version_content("native", native_segments)
+
+        # Step 3: Grade the Words
+        unique_words = set(native_segments)  # this is a list: ["你好", "世界"]
+        word_levels = self.grader.tag_words(unique_words)  # this is a dict: {"你好": "A1", "世界": "A2"}
+        processed_article.update_word_metadata_from_grades(word_levels)
+
+        # Step 4: Simplify the Text
+        simplified_content = self.simplifier.simplify_to_multiple_levels(processed_article)
+
+        # Step 5: Now we segment, grade, and update metadata for simplified versions
+        for version in ["beginner", "intermediate"]:
+            # 5a) Segment the new version
+            simplified_segments = self.segmenter.segment_text(simplified_content[version])
+            # 5b) Add segmented content to processed_article
+            processed_article.set_version_content(version, simplified_segments)
+            # 5c) Identify new words from this version
+            new_words = set(simplified_segments) - set(native_segments)
+            # 5d) Grade the new unique words
+            new_word_levels = self.grader.tag_words(new_words)
+            # 5e) Update metadata with the new graded words
+            processed_article.update_word_metadata_from_grades(new_word_levels)
+
+        # Step 6: Handle Missing entries in word metadata like word grading and definitions
+        processed_article.word_metadata = self.word_metadata_manager.fill_in_missing_metadata(processed_article.word_metadata)
+
+        return processed_article
