@@ -1,68 +1,51 @@
-from typing import Dict, List
-from ...utils.llm_client import LLMClient
-from ...article.article import Article
+from typing import Dict, List, Optional
+from processing_utils.prompts.entity_extraction_prompt import get_entity_extraction_prompt
+from processing_utils.llm_client import LLMClient
+import json
 
 class EntityExtractor:
     def __init__(self):
         self.llm_client = LLMClient()
-        self.type_mapping = {
-            "person": "names",
-            "place": "places",
-            "organization": "organizations",
-            "other": "misc"
-        }
 
-    def extract_entities(self, article: 'Article') -> Dict[str, Dict[str, str]]:
+    def extract_entities(self, mandarin_content: str, english_content: Optional[str] = None) -> Dict[str, Dict[str, str]]:
         """
-        Extract entities from an Article object.
-        
-        Args:
-            article: Article object containing mandarin and english content
-            
-        Returns:
-            Dictionary with entity types as keys and dictionaries of {entity: definition} as values
+        Extract entities from Mandarin content using LLM, with optional English content for context, returning a metadata dictionary for each entity.
         """
-        # Initialize result structure
-        result = {
-            "names": {},
-            "places": {},
-            "organizations": {},
-            "misc": {}
-        }
-        
-        # Get entities from LLM
-        entities = self.llm_client.extract_entities(article.mandarin_content, article.english_content)
-        
-        if not entities:
-            return result
-            
-        # Process each entity
+        # Generate the prompt
+        prompt = get_entity_extraction_prompt(mandarin_content, english_content)
+
+        # Define a validation function for the LLM response
+        def validate_entities_response(response: str) -> bool:
+            try:
+                entities = json.loads(response)
+                if not isinstance(entities, list):
+                    return False
+                # Ensure each entity is a dict with the expected keys (purposely missing "versions" key )
+                expected_keys = {"simplified", "traditional", "grade", "definition", "pinyin", "entity_type"}
+                return all(isinstance(entity, dict) and expected_keys.issubset(entity.keys()) for entity in entities)
+            except json.JSONDecodeError:
+                return False
+
+        # Get raw response from LLM with retry logic
+        response = self.llm_client.make_request(prompt, validate_response=validate_entities_response)
+        if not response:
+            return {}
+
+        # Parse the valid response
+        entities = json.loads(response)
+
+        # Process each entity and construct the metadata dictionary
+        entity_metadata = {}
         for entity in entities:
-            word = entity.get("word")
-            entity_type = entity.get("type")
-            english_def = entity.get("english", "")
-            
-            if not all([word, entity_type, english_def]):
-                continue
-                
-            # Map the entity type to our internal categories
-            category = self.type_mapping.get(entity_type)
-            if category:
-                result[category][word] = english_def
-                
-        return result
+            word = entity.get("simplified")
+            entity_metadata[word] = {
+                "simplified": entity.get("simplified", ""),
+                "traditional": entity.get("traditional", ""),
+                "grade": entity.get("grade", "unknown"),
+                "definition": entity.get("definition", ""),
+                "pinyin": entity.get("pinyin", ""),
+                "entity_type": entity.get("entity_type", "misc"),
+                "versions": ["native"]
+            }
 
-    def get_all_entities(self, entities_dict: Dict[str, Dict[str, str]]) -> List[str]:
-        """
-        Get a flat list of all entity words from the entities dictionary.
-        
-        Args:
-            entities_dict: The dictionary returned by extract_entities
-            
-        Returns:
-            List of all entity words
-        """
-        all_entities = []
-        for category in entities_dict.values():
-            all_entities.extend(category.keys())
-        return all_entities
+        return entity_metadata
