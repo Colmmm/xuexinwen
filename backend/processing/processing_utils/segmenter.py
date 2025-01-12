@@ -1,32 +1,16 @@
-from typing import List, Dict, Optional
+from typing import List, Optional
 import jieba
 import re
-from ...article.article import Article
 
 class Segmenter:
     def __init__(self):
         """Initialize the segmenter and ensure Jieba is loaded."""
         jieba.initialize()
 
-    def _clean_word(self, word: str) -> Optional[str]:
-        """
-        Clean word by removing punctuation and whitespace.
-        
-        Args:
-            word: Word to clean
-            
-        Returns:
-            Cleaned word or None if word is only punctuation/whitespace
-        """
-        cleaned = word.strip()
-        if not cleaned or re.match(r'^[\s\W]+$', cleaned):
-            return None
-        return cleaned
-
     def add_words_to_dictionary(self, words: List[str], freq: int = 1000):
         """
         Add words to Jieba's custom dictionary.
-        
+
         Args:
             words: List of words to add
             freq: Frequency to assign to the words
@@ -34,81 +18,50 @@ class Segmenter:
         for word in words:
             jieba.add_word(word, freq=freq)
 
-    def segment_text(self, text: str, custom_words: List[str] = None) -> List[str]:
+    def segment_text(self, text: str, custom_words: Optional[List[str]] = None) -> List[str]:
         """
-        Segment Chinese text into words using Jieba.
-        
+        Segment Chinese text into words using Jieba, retaining punctuation as separate segments.
+
         Args:
             text: Chinese text to segment
             custom_words: Optional list of custom words to add to dictionary
-            
+
         Returns:
-            List of segmented words with punctuation and empty strings removed
+            List of segmented words with punctuation retained and empty strings removed
         """
-        # Add any custom words to the dictionary
         if custom_words:
             self.add_words_to_dictionary(custom_words)
-        
+
         # Segment the text
         words = jieba.cut(text, cut_all=False)
-        
+
         # Clean and filter words
-        cleaned_words = []
-        for word in words:
-            cleaned = self._clean_word(word)
-            if cleaned:
-                cleaned_words.append(cleaned)
-                
+        cleaned_words = [self._clean_word(word) for word in words if self._clean_word(word)]
+
         return cleaned_words
 
-    def segment_article(self, article: Article, custom_words: List[str] = None) -> Dict[str, List[str]]:
+    def _clean_word(self, word: str) -> Optional[str]:
         """
-        Segment an article's content and its graded versions.
-        
-        Args:
-            article: Article object to segment
-            custom_words: Optional list of custom words to add to dictionary
-            
-        Returns:
-            Dictionary mapping content levels to their segmented words
-        """
-        # Initialize result with original content
-        result = {
-            'native': self.segment_text(article.mandarin_content, custom_words)
-        }
-        
-        # Process graded versions if they exist
-        if article.graded_content:
-            for level, content in article.graded_content.items():
-                result[level] = self.segment_text(content, custom_words)
-                
-        return result
+        Clean word by removing whitespace but retaining Chinese punctuation.
 
-    def get_sentence_boundaries(self, text: str) -> List[tuple]:
-        """
-        Get the start and end indices of sentences in text.
-        
         Args:
-            text: Text to analyze
-            
+            word: Word to clean
+
         Returns:
-            List of (start, end) tuples marking sentence boundaries
+            Cleaned word or None if the word is only whitespace.
         """
-        # Find all sentence-ending punctuation
-        boundaries = []
-        start = 0
-        
-        # Pattern for sentence endings (。！？followed by optional whitespace)
-        pattern = r'[。！？][\s]*'
-        
-        for match in re.finditer(pattern, text):
-            end = match.end()
-            if end > start:  # Only add non-empty sentences
-                boundaries.append((start, end))
-            start = end
-            
-        # Add the last segment if it doesn't end with punctuation
-        if start < len(text):
-            boundaries.append((start, len(text)))
-            
-        return boundaries
+        cleaned = word.strip()
+        if not cleaned:
+            return None
+
+        # Allow Chinese punctuation (。！？：；、“”‘’（）—…【】《》)
+        if re.match(r'^[。，！？：；、“”‘’（）—…【】《》]+$', cleaned):
+            return cleaned
+
+        # Remove non-Chinese characters and whitespace
+        if re.match(r'^[\s\W]+$', cleaned):
+            return None
+
+        return cleaned
+
+
