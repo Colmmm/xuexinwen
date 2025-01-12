@@ -23,7 +23,7 @@ class EntityExtractor:
                 entities = json.loads(response)
                 if not isinstance(entities, list):
                     return False
-                # Ensure each entity is a dict with the expected keys
+                # Ensure each entity is a dict with the expected keys (not including versions key because they would all just be ["native"])
                 expected_keys = {"simplified", "traditional", "grade", "definition", "pinyin", "entity_type"}
                 return all(isinstance(entity, dict) and expected_keys.issubset(entity.keys()) for entity in entities)
             except json.JSONDecodeError:
@@ -50,6 +50,7 @@ class EntityExtractor:
                     "definition": entity.get("definition", ""),
                     "pinyin": entity.get("pinyin", ""),
                     "entity_type": entity.get("entity_type", "misc"),
+                    "versions": ["native"]
                 }
 
             return entity_metadata
