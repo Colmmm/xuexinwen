@@ -130,6 +130,30 @@ class ProcessedArticle(Article):
                 entity_type=metadata.get("entity_type", "misc"),
                 versions=metadata.get("versions", [])  # Use provided versions
             )
+            
+    def update_word_metadata_from_grades(self, word_levels: Dict[str, GradeType]) -> None:
+        """
+        Update word metadata with CEFR levels from the Grader.
+
+        Args:
+            word_levels: Dictionary mapping words to their CEFR levels.
+        """
+        for word, grade in word_levels.items():
+            if word in self.word_metadata:
+                # Update the existing metadata entry with the new grade
+                self.word_metadata[word].grade = grade
+            else:
+                # Add a new metadata entry if it doesn't exist
+                self.add_word_metadata(
+                    word=word,
+                    simplified=word,
+                    traditional=word,
+                    grade=grade,
+                    definition="",
+                    pinyin="",
+                    entity_type=False,
+                    versions=["native"]
+                )
 
     def set_version_content(self, version: VersionType, content: List[str]) -> None:
         """
