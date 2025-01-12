@@ -2,6 +2,24 @@ import os
 import json
 import requests
 from typing import Optional, Callable
+from logging import logging
+
+# Configure logging
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
+
+# Custom exception classes
+class LLMClientError(Exception):
+    """Base exception for LLMClient errors."""
+    pass
+
+class APIRequestError(LLMClientError):
+    """Exception for API request errors."""
+    pass
+
+class ValidationError(LLMClientError):
+    """Exception for response validation errors."""
+    pass
 
 class LLMClient:
     def __init__(self):
@@ -31,6 +49,10 @@ class LLMClient:
 
         Returns:
             The response content from the LLM, or None if the request fails.
+
+        Raises:
+            APIRequestError: If the API request fails after retries.
+            ValidationError: If the response validation fails.
         """
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -47,17 +69,21 @@ class LLMClient:
         for attempt in range(max_retries):
             try:
                 response = requests.post(self.api_url, headers=headers, json=data)
-                response.raise_for_status()
+                response.raise_for_status()  # Raise HTTPError for bad status codes
                 content = response.json()["choices"][0]["message"]["content"]
 
                 # Validate the response if a validation function is provided
                 if validate_response and not validate_response(content):
-                    print(f"Validation failed on attempt {attempt + 1}")
-                    continue
+                    logger.error(f"Validation failed on attempt {attempt + 1}")
+                    raise ValidationError(f"Validation failed on attempt {attempt + 1}")
 
                 return content
 
             except requests.RequestException as e:
-                print(f"API request failed on attempt {attempt + 1}: {e}")
+                logger.error(f"API request failed on attempt {attempt + 1}: {e}")
+                if attempt == max_retries - 1:
+                    raise APIRequestError(f"API request failed after {max_retries} attempts") from e
 
-        return None
+            except json.JSONDecodeError as e:
+                logger.error("Failed to parse JSON response")
+                raise ValidationError("Failed to parse JSON response") from e
