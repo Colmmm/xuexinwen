@@ -34,7 +34,7 @@ class ProcessedArticle(Article):
     
     # Dictionary mapping words to their metadata
     word_metadata: Dict[str, WordMetadata]
-    
+
     def __init__(
         self,
         article_id: str,
@@ -75,7 +75,7 @@ class ProcessedArticle(Article):
             "beginner": []
         }
         self.word_metadata = {}
-    
+
     def add_word_metadata(
         self,
         word: str,
@@ -109,7 +109,28 @@ class ProcessedArticle(Article):
             entity_type=entity_type,
             presence_in_versions=versions
         )
-    
+
+    def update_word_metadata(self, entities: Dict[str, Dict[str, str]]) -> None:
+        """
+        Update word metadata.
+
+        Args:
+            entities: Dictionary of extracted entities where the key is the word
+                      and the value is a dictionary containing metadata fields.
+        """
+        # Iterate through each entity and add metadata
+        for word, metadata in entities.items():
+            self.add_word_metadata(
+                word=word,
+                simplified=metadata.get("simplified", ""),
+                traditional=metadata.get("traditional", ""),
+                grade=metadata.get("grade", "unknown"),
+                definition=metadata.get("definition", ""),
+                pinyin=metadata.get("pinyin", ""),
+                entity_type=metadata.get("entity_type", "misc"),
+                versions=metadata.get("versions", [])  # Use provided versions
+            )
+
     def set_version_content(self, version: VersionType, content: List[str]) -> None:
         """
         Set the segmented content for a specific version.
@@ -119,7 +140,7 @@ class ProcessedArticle(Article):
             content: List of segmented words/phrases
         """
         self.segmented_content[version] = content
-    
+
     def get_version_content(self, version: VersionType) -> List[str]:
         """
         Get the segmented content for a specific version.
@@ -131,7 +152,7 @@ class ProcessedArticle(Article):
             List of segmented words/phrases for the specified version
         """
         return self.segmented_content[version]
-    
+
     def get_word_metadata(self, word: str) -> Union[WordMetadata, None]:
         """
         Get metadata for a specific word/phrase.
@@ -143,7 +164,7 @@ class ProcessedArticle(Article):
             WordMetadata object if word exists, None otherwise
         """
         return self.word_metadata.get(word)
-    
+
     def to_dict(self) -> Dict:
         """Convert ProcessedArticle to dictionary representation, including base Article fields."""
         base_dict = super().to_dict()
@@ -163,7 +184,7 @@ class ProcessedArticle(Article):
                 for word, meta in self.word_metadata.items()
             }
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> 'ProcessedArticle':
         """Create ProcessedArticle instance from dictionary representation."""
