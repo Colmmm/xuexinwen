@@ -1,121 +1,106 @@
-from typing import Dict
+from typing import List, Dict, Optional
 
 # CEFR level descriptions for article simplification
 LEVEL_DESCRIPTIONS: Dict[str, str] = {
-    'A1': """
-        - Very basic vocabulary and simple sentences
-        - Focus on everyday topics and concrete needs
-        - Short, clear statements using common words
-        - Basic grammatical structures only
-        - High frequency vocabulary only
-    """,
-    
-    'A2': """
+    'beginner': """
+        - Based on CEFR levels A1 to A2 (Common European Framework of Reference for Languages)
         - Basic vocabulary and simple grammatical structures
         - Short, clear sentences about familiar topics
         - Common expressions and daily language
         - Simple connectors (and, but, because)
         - Present tense primarily, with some past tense
+        - Aim to use mostly A1-A2 level words, with a few B1 words for variety
+        - Entities needed for context should be included
+        - Target length: approximately one-quarter of the original content
     """,
-    
-    'B1': """
+
+    'intermediate': """
+        - Based on CEFR levels B1 to B2 (Common European Framework of Reference for Languages)
         - Common vocabulary and straightforward expressions
         - Clear paragraph structure and logical flow
         - Main points clearly expressed
         - More varied sentence structures
         - Common idioms and expressions
-    """,
-    
-    'B2': """
-        - More varied vocabulary while maintaining clarity
-        - Complex ideas explained in simpler terms
-        - Clear structure with good paragraph organization
-        - Natural flow with appropriate transitions
-        - Technical terms explained when used
+        - Aim to use mostly B1-B2 level words
+        - Entities needed for context should be included
+        - Target length: approximately half of the original content
     """
 }
 
-def get_simplification_prompt(zh_content: str, en_content: str, target_level: str) -> str:
+def get_simplification_prompt(
+    mandarin_content: str,
+    mandarin_title: str,
+    entities: List[Dict[str, str]],
+    word_grading_lists: Dict[str, List[str]],
+    english_content: Optional[str] = None,
+    english_title: Optional[str] = None
+) -> str:
     """
-    Generate prompt for article simplification to a target CEFR level.
-    
+    Generate a prompt for simplifying an article to beginner and intermediate levels.
+
     Args:
-        zh_content: Original Chinese content
-        en_content: Original English content (for context)
-        target_level: Target CEFR level for simplification
-        
+        mandarin_content: Original Chinese content of the article.
+        mandarin_title: Title of the article in Mandarin.
+        english_content: Optional English version of the content (for context).
+        english_title: Optional English version of the title (for context).
+        entities: List of entities extracted from the article.
+        word_grading_lists: Dictionary grouping words by their CEFR levels.
+
     Returns:
-        Formatted prompt string
+        A formatted prompt string to guide the LLM.
     """
-    level_desc = LEVEL_DESCRIPTIONS.get(target_level, "Simplified Chinese")
-    
+    entity_list = "\n".join(
+        f"- {entity['simplified']} ({entity['traditional']}): {entity['entity_type']} - {entity['definition']}"
+        for entity in entities
+    )
+
+    graded_words = "\n".join(
+        f"{level}: {', '.join(words)}"
+        for level, words in word_grading_lists.items() if words
+    )
+
+    english_context = f"\n### Context (English):\n{english_content}" if english_content else ""
+    english_title_section = f"- English Title: {english_title}\n" if english_title else ""
+
+    # Calculate original length and target lengths for beginner and intermediate
+    original_length = len(mandarin_content)
+    beginner_target_length = original_length // 4
+    intermediate_target_length = original_length // 2
+
     return f"""
-    Please simplify the following Chinese text to {target_level} level Chinese, while preserving the key information and maintaining natural flow. Use the English text as context to ensure accuracy.
+    Please simplify the following article to two levels: beginner and intermediate. Use the English content and title for context to ensure accuracy where available.
 
-    ### Target Level ({target_level}) Requirements:
-    {level_desc}
+    ### Article Details:
+    - Mandarin Title: {mandarin_title}
+    {english_title_section}
 
-    ### Guidelines:
-    1. Maintain key information and main ideas
-    2. Use vocabulary and grammar appropriate for {target_level} level
-    3. Keep proper nouns and essential terminology (with explanations if needed)
-    4. Break complex sentences into simpler ones
-    5. Preserve logical connections between ideas
-    6. Keep the text natural and readable
-    7. Maintain the original meaning while simplifying expression
-    8. Use appropriate connectors for the level
-    9. Include explanatory phrases for difficult concepts when necessary
+    ### Original Content (Mandarin):
+    {mandarin_content}
 
-    ### Original Chinese:
-    {zh_content}
+    {english_context}
 
-    ### English Context (for reference):
-    {en_content}
+    ### Entities:
+    {entity_list}
 
-    Return ONLY the simplified Chinese text, without any explanations or additional text.
-    The output should be a natural, flowing Chinese text that could be read independently.
-    """
+    ### Word Grading Lists:
+    {graded_words}
 
-def get_multi_level_prompt(zh_content: str, en_content: str, levels: list) -> str:
-    """
-    Generate prompt for creating multiple versions at different CEFR levels.
-    
-    Args:
-        zh_content: Original Chinese content
-        en_content: Original English content
-        levels: List of target CEFR levels
-        
-    Returns:
-        Formatted prompt string
-    """
-    level_descriptions = "\n\n".join([
-        f"### {level} Level Requirements:\n{LEVEL_DESCRIPTIONS.get(level, '')}"
-        for level in levels
-    ])
-    
-    return f"""
-    Please create multiple versions of the following Chinese text, simplified to different CEFR levels while maintaining key information. Use the English text as context to ensure accuracy.
+    ### Simplification Requirements:
+    BEGINNER Level:
+    Target length: approximately {beginner_target_length} characters
+    {LEVEL_DESCRIPTIONS['beginner']}
 
-    {level_descriptions}
+    INTERMEDIATE Level:
+    Target length: approximately {intermediate_target_length} characters
+    {LEVEL_DESCRIPTIONS['intermediate']}
 
-    ### General Guidelines:
-    1. Create a separate version for each level
-    2. Maintain key information and main ideas across all versions
-    3. Adjust vocabulary and grammar complexity for each level
-    4. Keep proper nouns and essential terminology
-    5. Ensure natural flow in each version
-    6. Preserve the logical structure of the content
+    ### IMPORTANT:
+    - The output MUST be in JSON format exactly as specified below.
+    - Do NOT include any additional text, explanations, or commentary.
 
-    ### Original Chinese:
-    {zh_content}
-
-    ### English Context:
-    {en_content}
-
-    Return the simplified versions in JSON format:
+    Return the simplified versions as a JSON object with the following format:
     {{
-        "A1": "A1 level text here",
-        "A2": "A2 level text here",
-        ...
+        "beginner": "Simplified content for beginner level",
+        "intermediate": "Simplified content for intermediate level"
     }}
     """
