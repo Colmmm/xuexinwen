@@ -3,7 +3,6 @@ import os
 
 from processing_utils.entity_extractor import EntityExtractor
 from processing_utils.segmenter import Segmenter
-from processing_utils.grader import Grader
 from processing_utils.simplifier import Simplifier
 from processing_utils.metadata_completer import MetadataCompleter
 from backend.article.processed_article import ProcessedArticle
@@ -13,7 +12,6 @@ class ArticleProcessor:
     def __init__(self):
         self.entity_extractor = EntityExtractor()
         self.segmenter = Segmenter()
-        self.grader = Grader()
         self.simplifier = Simplifier()
         self.metadata_completer = MetadataCompleter()
         
@@ -29,15 +27,14 @@ class ArticleProcessor:
         entities = self.entity_extractor.extract_entities(article.mandarin_content)
         processed_article.update_word_metadata(entities)
 
-        # Step 2: Segment the Native Content
+        # Step 2: Segment the Native Article Content
         native_segments = self.segmenter.segment_text(article.mandarin_content, custom_words=entities.keys())
         processed_article.set_version_content("native", native_segments)
 
         # Step 3: Grade the Words
-        unique_words = set(native_segments)  # this is a list: ["你好", "世界"]
-        word_levels = self.grader.tag_words(unique_words)  # this is a dict: {"你好": "A1", "世界": "A2"}
-        processed_article.update_word_metadata_from_grades(word_levels)
-
+        native_metadata = self.metadata_completer.from_segments(processed_article.word_metadata, native_segments, ['native'])
+        processed_article.update_word_metadata(native_metadata)
+       
         # Step 4: Simplify the Text
         simplified_content = self.simplifier.simplify_to_multiple_levels(processed_article)
 
@@ -47,14 +44,10 @@ class ArticleProcessor:
             simplified_segments = self.segmenter.segment_text(simplified_content[version])
             # 5b) Add segmented content to processed_article
             processed_article.set_version_content(version, simplified_segments)
-            # 5c) Identify new words from this version
-            new_words = set(simplified_segments) - set(native_segments)
-            # 5d) Grade the new unique words
-            new_word_levels = self.grader.tag_words(new_words)
-            # 5e) Update metadata with the new graded words
-            processed_article.update_word_metadata_from_grades(new_word_levels)
+            # 5c) Get metadata for simplified version
+            simplified_metadata = self.metadata_completer.from_segments(processed_article.word_metadata, simplified_segments, [version]) 
+            # 5e) Update metadata from new metadata from simplified versions 
+            processed_article.update_word_metadata(simplified_metadata)
 
-        # Step 6: Handle Missing entries in word metadata like word grading and definitions
-        processed_article.word_metadata = self.metadata_completer.fill_in_missing_metadata(processed_article.word_metadata)
 
         return processed_article
