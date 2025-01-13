@@ -1,69 +1,73 @@
-from typing import Dict, Optional, List
-from ...utils.llm_client import LLMClient
-from ...article.article import Article
+from typing import Dict, List, Optional
+from processing_utils.prompts.simplification_prompt import get_simplification_prompt
+from processing_utils.llm_client import LLMClient, APIRequestError, ValidationError
+import json
+from logging.logger_config import setup_logger
 
-class ArticleSimplifier:
+logger = setup_logger(__name__)
+
+class Simplifier:
     """
-    Handles the simplification of articles to different difficulty levels.
-    Works with Article objects and processes their full content.
+    Simplifies Chinese articles to different CEFR levels using a language model.
     """
-    
+
     def __init__(self):
-        """Initialize the article simplifier."""
         self.llm_client = LLMClient()
-        # Map our internal level names to CEFR levels
-        self.level_mapping = {
-            'BEGINNER': 'A2',
-            'INTERMEDIATE': 'B1'
-        }
 
-    def simplify_article(self, article: Article) -> None:
+    def simplify(self, article: 'ProcessedArticle') -> Dict[str, str]:
         """
-        Process an article, creating simplified versions at different difficulty levels.
-        Updates the article's graded_content with simplified versions.
-        
+        Simplifies an article into beginner and intermediate levels using the LLM client.
+
         Args:
-            article: Article object to simplify
+            article: ProcessedArticle object containing the original native content.
+
+        Returns:
+            A dictionary with simplified versions for 'beginner' and 'intermediate'.
         """
-        # Skip empty articles
-        if not article.mandarin_content or not article.english_content:
-            return
+
+        # Generate the prompt
+        prompt = get_simplification_prompt(
+          article.mandarin_content,
+          article.mandarin_title,
+          article.english_content,
+          article.english_title,
+          article.get_entities(),
+          article.get_word_grading_lists()
+        )
+
+        # Define a validation function for the LLM response
+        def validate_simplification_response(response: str) -> bool:
+            try:
+                versions = json.loads(response)
+                if not isinstance(versions, dict):
+                    return False
+                expected_levels = {"beginner", "intermediate"}
+                return expected_levels.issubset(versions.keys())
+            except json.JSONDecodeError:
+                return False
 
         try:
-            # Get simplified versions for each difficulty level
-            simplified_versions = self.llm_client.simplify_to_multiple_levels(
-                zh_content=article.mandarin_content,
-                en_content=article.english_content,
-                levels=list(self.level_mapping.values())  # ['A2', 'B1']
-            )
-            
-            # Skip if no simplified versions were returned
-            if not simplified_versions or len(simplified_versions) <= 1:  # Only original content
-                return
-            
-            # Initialize graded_content if needed
-            if article.graded_content is None:
-                article.graded_content = {}
-            
-            # Map the simplified versions to our internal level names
-            for internal_level, cefr_level in self.level_mapping.items():
-                if cefr_level in simplified_versions:
-                    article.graded_content[internal_level] = simplified_versions[cefr_level]
-        except Exception:
-            # Log error and continue
-            pass
+            # Get raw response from LLM with retry logic
+            response = self.llm_client.make_request(prompt, validate_response=validate_simplification_response)
+            if not response:
+                logger.error("No response from LLM after retries.")
+                return {'beginner': '', 'intermediate': ''}
 
-    def process_article_batch(self, articles: List[Article]) -> None:
-        """
-        Process a batch of articles, creating simplified versions for each.
-        Updates each article's graded_content with simplified versions.
-        
-        Args:
-            articles: List of Article objects to process
-        """
-        for article in articles:
-            try:
-                self.simplify_article(article)
-            except Exception as e:
-                print(f"Error processing article {article.article_id}: {e}")
-                continue
+            # Parse the valid response
+            simplified_versions = json.loads(response)
+            return {
+                'beginner': simplified_versions.get('beginner', ''),
+                'intermediate': simplified_versions.get('intermediate', '')
+            }
+
+        except APIRequestError as e:
+            logger.error(f"API request failed: {e}")
+            return {'beginner': '', 'intermediate': ''}
+
+        except ValidationError as e:
+            logger.error(f"Response validation error: {e}")
+            return {'beginner': '', 'intermediate': ''}
+
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse JSON response after validation.")
+            return {'beginner': '', 'intermediate': ''}
