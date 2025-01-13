@@ -5,7 +5,7 @@ from processing_utils.entity_extractor import EntityExtractor
 from processing_utils.segmenter import Segmenter
 from processing_utils.grader import Grader
 from processing_utils.simplifier import Simplifier
-from processing_utils.metadata_manager import WordMetadataManager
+from processing_utils.metadata_completer import MetadataCompleter
 from backend.article.processed_article import ProcessedArticle
 from backend.article.article import Article
 
@@ -15,7 +15,7 @@ class ArticleProcessor:
         self.segmenter = Segmenter()
         self.grader = Grader()
         self.simplifier = Simplifier()
-        self.word_metadata_manager = WordMetadataManager()
+        self.metadata_completer = MetadataCompleter()
         
     def process_article(self, article: Article) -> ProcessedArticle:
         """
@@ -55,6 +55,6 @@ class ArticleProcessor:
             processed_article.update_word_metadata_from_grades(new_word_levels)
 
         # Step 6: Handle Missing entries in word metadata like word grading and definitions
-        processed_article.word_metadata = self.word_metadata_manager.fill_in_missing_metadata(processed_article.word_metadata)
+        processed_article.word_metadata = self.metadata_completer.fill_in_missing_metadata(processed_article.word_metadata)
 
         return processed_article
