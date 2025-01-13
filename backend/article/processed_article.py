@@ -188,6 +188,42 @@ class ProcessedArticle(Article):
             WordMetadata object if word exists, None otherwise
         """
         return self.word_metadata.get(word)
+    
+    def get_entities(self) -> List[Dict[str, str]]:
+        """
+        Extracts a list of entities from the word metadata.
+
+        Returns:
+            A list of dictionaries representing entities, each containing:
+            - simplified: Simplified Chinese form of the word
+            - traditional: Traditional Chinese form of the word
+            - entity_type: Type of the entity (e.g., person, place, organization)
+            - definition: English definition or description of the entity
+        """
+        entities = []
+        for word, metadata in self.word_metadata.items():
+            if metadata.get("entity_type") and metadata["entity_type"] != "false":
+                entities.append({
+                    "simplified": metadata.get("simplified", word),
+                    "traditional": metadata.get("traditional", word),
+                    "entity_type": metadata.get("entity_type"),
+                    "definition": metadata.get("definition", "")
+                })
+        return entities
+
+    def get_word_grading_lists(self) -> Dict[str, List[str]]:
+        """
+        Groups words by their CEFR levels.
+
+        Returns:
+            A dictionary where keys are CEFR levels (A0, A1, ..., C2, unknown) and
+            values are lists of words at those levels.
+        """
+        gradings = {level: [] for level in ["A0", "A1", "A2", "B1", "B2", "C1", "C2", "unknown"]}
+        for word, metadata in self.word_metadata.items():
+            grade = metadata.get("grade", "unknown")
+            gradings[grade].append(word)
+        return gradings
 
     def to_dict(self) -> Dict:
         """Convert ProcessedArticle to dictionary representation, including base Article fields."""
