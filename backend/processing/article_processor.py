@@ -13,7 +13,7 @@ class ArticleProcessor:
         self.entity_extractor = EntityExtractor()
         self.segmenter = Segmenter()
         self.simplifier = Simplifier()
-        self.metadata_completer = MetadataGenerator()
+        self.metadata_generator = MetadataGenerator()
         
     def process_article(self, article: Article) -> ProcessedArticle:
         """

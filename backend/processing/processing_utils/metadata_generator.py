@@ -1,108 +1,197 @@
-from typing import Dict, List, Optional
-from datetime import datetime
-from dataclasses import dataclass
-from article import Article
-from word_metadata import WordMetadataCollection, WordMetadata, VersionType, EntityType, GradeType
+from typing import Dict, List, Optional, Set
+import json
+import logging
+import opencc
+from pypinyin import pinyin, Style
+from pypinyin.contrib.tone_convert import to_tone
+from chinese_english_lookup import Dictionary
 
-class MetadataCompleter:
-    """
-    A class to complete word metadata based on segmented text versions.
-    """
-    def __init__(self, grade_dict: Dict[str, str], cedict: Dict[str, Dict]):
-        self.grade_dict = grade_dict
-        self.cedict = cedict
+from article.processed_article import (
+    WordMetadata,
+    WordMetadataCollection,
+    VersionType,
+    EntityType,
+    GradeType
+)
+from processing_utils.llm_client import LLMClient
+from processing_utils.prompts.metadata_completion_prompt import (
+    get_metadata_completion_prompt,
+    validate_metadata_completion_response
+)
 
-    @classmethod
-    def from_segments(
-        cls,
+logger = logging.getLogger(__name__)
+
+class MetadataGenerator:
+    """
+    A class to generate and complete word metadata based on segmented text versions.
+    Includes integrated grading functionality.
+    """
+    def __init__(self):
+        """Initialize the MetadataGenerator."""
+        self.grade_dict = {}  # Will be populated as needed
+        self.cedict = Dictionary()  # Initialize CC-CEDICT dictionary
+        self.llm_client = None  # Will be initialized when needed
+        self.s2t_converter = opencc.OpenCC('s2t.json')
+
+    def generate_from_segments(
+        self,
+        segments: List[str],
+        version: VersionType,
+        existing_metadata: Optional[WordMetadataCollection] = None
+    ) -> WordMetadataCollection:
+        """
+        Generate metadata from segmented text and update with version information.
+
+        Args:
+            segments: List of segmented words
+            version: Version of the article being processed
+            existing_metadata: Existing metadata if any to update
+
+        Returns:
+            Updated WordMetadataCollection
+        """
+        # If exisiting_metadata already exisits use it, if not initialize it
+        if existing_metadata is None:
+          existing_metadata = WordMetadataCollection()
+        
+        # Process words to update versions and get new words
+        unique_words = self._process_segmented_words(segments, version, existing_metadata)
+
+        # Process each unique word
+        for word in unique_words:
+            metadata = self._generate_word_metadata(word, version)
+            existing_metadata.add_or_update_metadata(metadata)
+
+        # Fill in missing data with LLM
+        self._fill_missing_metadata(existing_metadata)
+
+        return existing_metadata
+
+    def _process_segmented_words(
+        self,
         segments: List[str],
         version: VersionType,
         existing_metadata: WordMetadataCollection
-    ) -> WordMetadataCollection:
+      ) -> Set[str]:
         """
-        Generate a WordMetadataCollection from segmented text and a specific version.
-
+        Process segmented words to update version info (if metadata already exists) and identify new words.
+      
         Args:
             segments: List of segmented words.
-            version: The version of the article to which the segments belong (e.g., 'native', 'intermediate', 'beginner').
-            existing_metadata: Existing WordMetadataCollection to update with new metadata.
-
+            version: The version of the article being processed.
+            existing_metadata: The existing metadata collection to update.
+      
         Returns:
-            Updated WordMetadataCollection with completed metadata.
+            Set of unique new words.
         """
-		# 1) Sorting out unique new words, because if theres some words that already exist in the 
-		# exisiting_metadata, we dont want to want to waste time reprocessing them so what we should do
-		# is go through each of the words in the segments check if they are in exisiting_metadata, if
-		# so, add the new versions and take them out of ones that need more processing
-		
-		# 2) grade the segments (I can reuse the grading code)
-		# grader all needs to take into account that if its an artifact, it will have a grade already but 
-		# it wont be official and instead a guess from LLM, but if the word exists in the dict, then we use that instead
-		# as that will be more official and up to date
-		word_levels = self.grader.tag_words(unique_words)  # this is a dict: {"你好": "A1", "世界": "A2"}
-        # I think I should just bring the `update_word_metadata_from_grades` method from processed_article to here as well as grader. But then should I create my own wordmetadata class(?), not sure how to best handle it
-        # I wonder if I should create a definite class word_metadata which is Dict[str, WordMetaData] in processed_article with useful methods so I can import them and use them here
-        processed_article.update_word_metadata_from_grades(word_levels)
+        new_words = set()
+      
+        for word in segments:
+            existing_meta = existing_metadata.get_metadata(word)
+            if existing_meta:
+                # Update version presence for existing word
+                if version not in existing_meta.presence_in_versions:
+                    existing_meta.presence_in_versions.append(version)
+            else:
+                # Track new word
+                new_words.add(word)
+      
+        return new_words
 
-		# 3) Get traditional version (but function)
-		import opencc
-		converter = opencc.OpenCC('s2t.json')
-		converter.convert('汉字')  # 漢字
+    def _get_word_grade(self, word: str) -> GradeType:
+        """
+        Get the grade level for a word.
+        
+        First checks official grade dictionary, then falls back to LLM-generated grade
+        if word isn't in dictionary.
+        """
+        # Check official grade dictionary first
+        if word in self.grade_dict:
+            return self.grade_dict[word]
+        
+        # For now return unknown - LLM will fill this in later
+        return "unknown"
 
-		# 4) get pinyin
-		from chinese_english_lookup import Dictionary # probably need to setup some dict object and init in __init__ 
-		d = Dictionary()
-		word_entry = d.lookup('牛油果')
-		# I think I should use the chinese_english_lookup (cc_cdict) first in case the word is present then
-		if len(word_entry.definition_entries)
-			pinyin = word_entry.definition_entries[0].pinyin # 'niu2 you2 guo3'
-			# now need to convert it into tonal form
-			from pypinyin.contrib.tone_convert import to_normal, to_tone, to_initials, to_finals
-			to_tone(pinyin) # need to figure out appropriate output
-		else:
-			# if not in dict then use this pinyin package straight (I want to use dict first because some zi have two pinyins but if its a part of a word then the dict definition probably correct)
-			from pypinyin import pinyin, lazy_pinyin, Style
-			pinyin('中心')  # or pinyin(['中心'])，参数值为列表时表示输入的是已分词后的数据
-			# [['zhōng'], ['xīn']]
+    def _generate_word_metadata(self, word: str, version: VersionType) -> WordMetadata:
+        """Generate initial metadata for a single word."""
+        # Get grade level
+        grade = self._get_word_grade(word)
 
-		# 5) Get the definitions
-		word_entry.definition_entries[0].definitions
-		#['avocado (Persea americana)']
+        # Try to get entry from dictionary
+        word_entry = self.cedict.lookup(word)
+        
+        if word_entry and len(word_entry.definition_entries) > 0:
+            # Get traditional form from dictionary
+            traditional = word_entry.trad
+            # Get first definition entry
+            first_entry = word_entry.definition_entries[0]
+            # Convert numbered pinyin to tonal
+            pinyin_str = self._convert_to_tonal_pinyin(first_entry.pinyin)
+            # Get definitions
+            definition = '; '.join(first_entry.definitions)
+        else:
+            # Fallback to opencc for traditional if not in dictionary
+            traditional = self.s2t_converter.convert(word)
+            # Fallback to pypinyin for pinyin
+            pinyin_result = pinyin(word, style=Style.TONE)
+            pinyin_str = ' '.join([syl[0] for syl in pinyin_result])
+            # No definition available
+            definition = ""
 
-		# 6) fill in missing data with LLM call
-		# will neeed to iterate through all current and pre-exisiting metadata
-		# (still need to figure out how I will manage the new processed metadata and old one)
-		for wordmetadata in all_wordmetadata:
-			if wordmetadata['grade'] == 'unknown' or '' or wordmetadata['definition'] == 'unknown' or '':
-				metadata_w_missing_entries.append(wordmetadata)
-		# get prompt for filling in missing metadata
-		prompt = get_fill_missing_metadata_prompt(metadata_w_missing_entries)
-		# we can define a validation function to assert the llm output and how we expect it to just be 
-		# a list of dicts, basically List[wordMetadata]
-		def validate_fillingMissingMetadata_response(response: str) -> bool:
-			return
-		try:
-            # Get raw response from LLM with retry logic
-            response = self.llm_client.make_request(prompt, validate_response=validate_fillingMissingMetadata_response)
+        return WordMetadata(
+            simplified=word,
+            traditional=traditional,
+            grade=grade,
+            definition=definition,
+            pinyin=pinyin_str,
+            entity_type=False,  # Will be updated by entity extractor if needed
+            presence_in_versions=[version]
+        )
+
+    def _convert_to_tonal_pinyin(self, pinyin_str: str) -> str:
+        """Convert numbered pinyin to tonal pinyin."""
+        return to_tone(pinyin_str)
+
+    def _fill_missing_metadata(self, metadata_collection: WordMetadataCollection) -> None:
+        """Fill in missing metadata fields using LLM."""
+        # Collect words with missing data
+        words_needing_completion = []
+        for word, meta in metadata_collection.get_all_metadata().items():
+            if not meta.definition or meta.grade == "unknown":
+                words_needing_completion.append({
+                    "word": word,
+                    "current_metadata": {
+                        "definition": meta.definition,
+                        "grade": meta.grade
+                    }
+                })
+
+        if not words_needing_completion:
+            return
+
+        try:
+            # Get prompt for LLM
+            prompt = get_metadata_completion_prompt(words_needing_completion)
+
+            # Get response from LLM
+            response = self.llm_client.make_request(
+                prompt,
+                validate_response=validate_metadata_completion_response
+            )
+
             if not response:
                 logger.error("No response from LLM after retries.")
-                return {'beginner': '', 'intermediate': ''}
+                return
 
-            # Parse the valid response
-            simplified_versions = json.loads(response)
-            return {
-                'beginner': simplified_versions.get('beginner', ''),
-                'intermediate': simplified_versions.get('intermediate', '')
-            }
+            # Update metadata with LLM responses
+            completed_metadata = json.loads(response)
+            for word_data in completed_metadata:
+                word = word_data["word"]
+                if meta := metadata_collection.get_metadata(word):
+                    if not meta.definition and "definition" in word_data:
+                        meta.definition = word_data["definition"]
+                    if meta.grade == "unknown" and "grade" in word_data:
+                        meta.grade = word_data["grade"]
 
-        except APIRequestError as e:
-            logger.error(f"API request failed: {e}")
-            return {'beginner': '', 'intermediate': ''}
-
-        except ValidationError as e:
-            logger.error(f"Response validation error: {e}")
-            return {'beginner': '', 'intermediate': ''}
-
-        except json.JSONDecodeError as e:
-            logger.error("Failed to parse JSON response after validation.")
-            return {'beginner': '', 'intermediate': ''}
+        except Exception as e:
+            logger.error(f"Error filling missing metadata: {e}")
