@@ -13,8 +13,8 @@ EntityType = Literal["person", "location", "organization", "misc", False]
 GradeType = Literal["A0", "A1", "A2", "B1", "B2", "C1", "C2"]
 
 @dataclass
-class WordMetadata:
-    """Metadata for a single word/phrase in the article."""
+class WordMetadataEntry:
+    """Metadata entry for a single word/phrase in the article."""
     simplified: str
     traditional: str
     grade: GradeType
@@ -23,14 +23,14 @@ class WordMetadata:
     entity_type: EntityType
     presence_in_versions: List[VersionType]
 
-class WordMetadataCollection:
+class WordMetadata:
     """
-    A helper class to manage multiple WordMetadata objects.
+    A class to manage multiple WordMetadataEntry objects.
     """
     def __init__(self):
-        self._metadata: Dict[str, WordMetadata] = {}
+        self._metadata: Dict[str, WordMetadataEntry] = {}
 
-    def add_or_update_metadata(self, metadata: WordMetadata) -> None:
+    def add_or_update_metadata(self, metadata: WordMetadataEntry) -> None:
         word = metadata.simplified
         if word in self._metadata:
             existing_metadata = self._metadata[word]
@@ -41,13 +41,13 @@ class WordMetadataCollection:
         else:
             self._metadata[word] = metadata
 
-    def get_metadata(self, word: str) -> Optional[WordMetadata]:
+    def get_metadata(self, word: str) -> Optional[WordMetadataEntry]:
         return self._metadata.get(word)
 
-    def get_all_metadata(self) -> Dict[str, WordMetadata]:
+    def get_all_metadata(self) -> Dict[str, WordMetadataEntry]:
         return self._metadata
 
-    def merge(self, new_metadata: WordMetadataCollection) -> None:
+    def merge(self, new_metadata: 'WordMetadata') -> None:
         for metadata in new_metadata.get_all_metadata().values():
             self.add_or_update_metadata(metadata)
 
@@ -58,14 +58,14 @@ class ProcessedArticle(Article):
     segmented content for different proficiency levels and comprehensive word metadata.
     """
     segmented_content: Dict[VersionType, List[str]]
-    word_metadata: WordMetadataCollection
+    word_metadata: WordMetadata
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.segmented_content = {"native": [], "intermediate": [], "beginner": []}
-        self.word_metadata = WordMetadataCollection()  # Updated to use the new collection class
+        self.word_metadata = WordMetadata()
 
-    def update_word_metadata(self, new_metadata: WordMetadataCollection) -> None:
+    def update_word_metadata(self, new_metadata: WordMetadata) -> None:
         """
         Update word metadata.
 
@@ -80,7 +80,7 @@ class ProcessedArticle(Article):
     def get_version_content(self, version: VersionType) -> List[str]:
         return self.segmented_content[version]
 
-    def get_word_metadata(self, word: str) -> Union[WordMetadata, None]:
+    def get_word_metadata(self, word: str) -> Union[WordMetadataEntry, None]:
         return self.word_metadata.get_metadata(word)
 
     def get_entities(self) -> List[Dict[str, str]]:
@@ -123,9 +123,9 @@ class ProcessedArticle(Article):
     def from_dict(cls, data: Dict) -> 'ProcessedArticle':
         instance = super().from_dict(data)
         instance.segmented_content = data.get('segmented_content', {"native": [], "intermediate": [], "beginner": []})
-        instance.word_metadata = WordMetadataCollection()
+        instance.word_metadata = WordMetadata()
         for meta in data.get('word_metadata', {}).values():
-            instance.word_metadata.add_or_update_metadata(WordMetadata(
+            instance.word_metadata.add_or_update_metadata(WordMetadataEntry(
                 simplified=meta['simplified'],
                 traditional=meta['traditional'],
                 grade=meta['grade'],

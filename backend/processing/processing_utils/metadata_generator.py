@@ -7,8 +7,8 @@ from pypinyin.contrib.tone_convert import to_tone
 from chinese_english_lookup import Dictionary
 
 from article.processed_article import (
+    WordMetadataEntry,
     WordMetadata,
-    WordMetadataCollection,
     VersionType,
     EntityType,
     GradeType
@@ -37,8 +37,8 @@ class MetadataGenerator:
         self,
         segments: List[str],
         version: VersionType,
-        existing_metadata: Optional[WordMetadataCollection] = None
-    ) -> WordMetadataCollection:
+        existing_metadata: Optional[WordMetadata] = None
+    ) -> WordMetadata:
         """
         Generate metadata from segmented text and update with version information.
 
@@ -48,11 +48,11 @@ class MetadataGenerator:
             existing_metadata: Existing metadata if any to update
 
         Returns:
-            Updated WordMetadataCollection
+            Updated WordMetadata
         """
         # If exisiting_metadata already exisits use it, if not initialize it
         if existing_metadata is None:
-          existing_metadata = WordMetadataCollection()
+          existing_metadata = WordMetadata()
         
         # Process words to update versions and get new words
         unique_words = self._process_segmented_words(segments, version, existing_metadata)
@@ -71,7 +71,7 @@ class MetadataGenerator:
         self,
         segments: List[str],
         version: VersionType,
-        existing_metadata: WordMetadataCollection
+        existing_metadata: WordMetadata
       ) -> Set[str]:
         """
         Process segmented words to update version info (if metadata already exists) and identify new words.
@@ -112,7 +112,7 @@ class MetadataGenerator:
         # For now return unknown - LLM will fill this in later
         return "unknown"
 
-    def _generate_word_metadata(self, word: str, version: VersionType) -> WordMetadata:
+    def _generate_word_metadata(self, word: str, version: VersionType) -> WordMetadataEntry:
         """Generate initial metadata for a single word."""
         # Get grade level
         grade = self._get_word_grade(word)
@@ -138,7 +138,7 @@ class MetadataGenerator:
             # No definition available
             definition = ""
 
-        return WordMetadata(
+        return WordMetadataEntry(
             simplified=word,
             traditional=traditional,
             grade=grade,
@@ -152,7 +152,7 @@ class MetadataGenerator:
         """Convert numbered pinyin to tonal pinyin."""
         return to_tone(pinyin_str)
 
-    def _fill_missing_metadata(self, metadata_collection: WordMetadataCollection) -> None:
+    def _fill_missing_metadata(self, metadata_collection: WordMetadata) -> None:
         """Fill in missing metadata fields using LLM."""
         # Collect words with missing data
         words_needing_completion = []

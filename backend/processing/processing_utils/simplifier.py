@@ -3,7 +3,7 @@ from processing_utils.prompts.simplification_prompt import get_simplification_pr
 from processing_utils.llm_client import LLMClient, APIRequestError, ValidationError
 import json
 from logging.logger_config import setup_logger
-
+from article.processed_article import ProcessedArticle
 logger = setup_logger(__name__)
 
 class Simplifier:
@@ -14,7 +14,7 @@ class Simplifier:
     def __init__(self):
         self.llm_client = LLMClient()
 
-    def simplify(self, article: 'ProcessedArticle') -> Dict[str, str]:
+    def simplify(self, article: ProcessedArticle) -> Dict[str, str]:
         """
         Simplifies an article into beginner and intermediate levels using the LLM client.
 

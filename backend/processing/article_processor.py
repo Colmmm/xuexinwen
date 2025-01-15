@@ -24,11 +24,11 @@ class ArticleProcessor:
         processed_article = ProcessedArticle.from_article(article)
 
         # Step 1: Extract Entities
-        entities = self.entity_extractor.extract_entities(article.mandarin_content)
-        processed_article.update_word_metadata(entities)
+        entities_metadata = self.entity_extractor.extract_entities(article.mandarin_content)
+        processed_article.update_word_metadata(entities_metadata)
 
         # Step 2: Segment the Native Article Content
-        native_segments = self.segmenter.segment_text(article.mandarin_content, custom_words=entities.keys())
+        native_segments = self.segmenter.segment_text(article.mandarin_content, custom_words=entities_metadata.keys())
         processed_article.set_version_content("native", native_segments)
 
         # Step 3: Generate metadata for native article content
