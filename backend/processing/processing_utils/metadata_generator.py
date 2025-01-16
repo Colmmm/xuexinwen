@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Set
 import json
 import logging
 import opencc
+import csv
+from pathlib import Path
 from pypinyin import pinyin, Style
 from pypinyin.contrib.tone_convert import to_tone
 from chinese_english_lookup import Dictionary
@@ -28,16 +30,46 @@ class MetadataGenerator:
     """
     def __init__(self):
         """Initialize the MetadataGenerator."""
-        self.grade_dict = {}  # Will be populated as needed
+        self.grade_dict = self._load_grade_dict()  # Will be populated as needed
         self.cedict = Dictionary()  # Initialize CC-CEDICT dictionary
         self.llm_client = None  # Will be initialized when needed
         self.s2t_converter = opencc.OpenCC('s2t.json')
+
+    def _load_grade_dict(self) -> Dict[str, Dict[str, str]]:
+        """
+        Load the TOCFL grade dictionary from the CSV file.
+
+        Returns:
+            A dictionary mapping words (simplified) to their metadata:
+            - grade: CEFR grade level
+            - definitions: Word definitions
+            - pinyin: Tonal pinyin
+        """
+        grade_dict = {}
+        file_path = Path(__file__).parent.parent / "assets" / "official_tocfl_list_processed.csv"
+        
+        try:
+            with open(file_path, mode='r', encoding='utf-8') as csv_file:
+                reader = csv.DictReader(csv_file)
+                for row in reader:
+                    simplified = row['simplified']
+                    grade_dict[simplified] = {
+                        "grade": row['cefr_level'],
+                        "definitions": row['definitions'],
+                        "pinyin": row['pinyin']
+                    }
+        except FileNotFoundError:
+            logger.error(f"Grade dictionary file not found at {file_path}")
+        except Exception as e:
+            logger.error(f"Error loading grade dictionary: {e}")
+
+        return grade_dict 
 
     def generate_from_segments(
         self,
         segments: List[str],
         version: VersionType,
-        existing_metadata: Optional[WordMetadata] = None
+        metadata: Optional[WordMetadata] = None
     ) -> WordMetadata:
         """
         Generate metadata from segmented text and update with version information.
@@ -45,27 +77,27 @@ class MetadataGenerator:
         Args:
             segments: List of segmented words
             version: Version of the article being processed
-            existing_metadata: Existing metadata if any to update
+            metadata: Existing metadata if any to update
 
         Returns:
             Updated WordMetadata
         """
         # If exisiting_metadata already exisits use it, if not initialize it
-        if existing_metadata is None:
-          existing_metadata = WordMetadata()
+        if metadata is None:
+          metadata = WordMetadata()
         
         # Process words to update versions and get new words
-        unique_words = self._process_segmented_words(segments, version, existing_metadata)
+        unique_words = self._process_segmented_words(segments, version, metadata)
 
         # Process each unique word
         for word in unique_words:
-            metadata = self._generate_word_metadata(word, version)
-            existing_metadata.add_or_update_metadata(metadata)
+            metadataEntry = self._generate_word_metadata(word, version) # metadata for single word
+            metadata.add_or_update_metadata(metadataEntry)
 
         # Fill in missing data with LLM
-        self._fill_missing_metadata(existing_metadata)
+        self._fill_missing_metadata(metadata)
 
-        return existing_metadata
+        return metadata
 
     def _process_segmented_words(
         self,
@@ -97,20 +129,6 @@ class MetadataGenerator:
                 new_words.add(word)
       
         return new_words
-
-    def _get_word_grade(self, word: str) -> GradeType:
-        """
-        Get the grade level for a word.
-        
-        First checks official grade dictionary, then falls back to LLM-generated grade
-        if word isn't in dictionary.
-        """
-        # Check official grade dictionary first
-        if word in self.grade_dict:
-            return self.grade_dict[word]
-        
-        # For now return unknown - LLM will fill this in later
-        return "unknown"
 
     def _generate_word_metadata(self, word: str, version: VersionType) -> WordMetadataEntry:
         """Generate initial metadata for a single word."""
@@ -147,6 +165,22 @@ class MetadataGenerator:
             entity_type=False,  # Will be updated by entity extractor if needed
             presence_in_versions=[version]
         )
+
+    def _get_word_grade(self, word: str) -> GradeType:
+        """
+        Get the grade level for a word.
+        
+        First checks official grade dictionary, then falls back to LLM-generated grade
+        if word isn't in dictionary.
+        """
+        # Check official grade dictionary first
+        if word in self.grade_dict:
+            grade = self.grade_dict[word]['grade']
+            if grade and grade in GradeType.__args__:  # Ensure grade is valid and not "unknown"
+                return grade
+
+        # For now return unknown - LLM will fill this in later
+        return "unknown"
 
     def _convert_to_tonal_pinyin(self, pinyin_str: str) -> str:
         """Convert numbered pinyin to tonal pinyin."""
