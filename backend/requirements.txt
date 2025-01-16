@@ -27,7 +27,10 @@ typing-extensions>=4.8.0
 # pandas
 pandas>=2.2.3
 
-# openCC 
+# metadata_generator stuff
+# switching between simp and trad hanzi
 opencc
-
-pycccedict
+# pinyin
+pypinyin
+# cedict 
+chinese_english_lookup
