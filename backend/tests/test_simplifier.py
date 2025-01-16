@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 from typing import Dict
-from backend.main_processing.simplify_articles import ArticleSimplifier
+from backend.processing.processing_utils.simplifier import Simplifier
 from backend.article.article import Article
 
 @pytest.fixture

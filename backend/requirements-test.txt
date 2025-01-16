@@ -27,6 +27,9 @@ python-dotenv>=1.0.0
 mysql-connector-python>=8.1.0  # MySQL Python connector
 SQLAlchemy>=2.0.0            # SQL ORM
 testing.mysqld>=1.4.0        # MySQL test server
+chinese-english-lookup # Chinese dictionary lookup
+opencc  # Traditional/Simplified conversion
+pypinyin  # Pinyin conversion
 
 # Type stubs for better type checking
 types-requests>=2.31.0.10

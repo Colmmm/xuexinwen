@@ -7,6 +7,7 @@ import mysql.connector
 from mysql.connector import Error
 from backend.article.article import Article
 from backend.database.db_manager import DatabaseManager
+from backend.logger.logger import setup_logger
 
 @pytest.fixture(scope="session")
 def mysql_test_config():
@@ -104,7 +105,7 @@ def cleanup_database(db_manager):
 @pytest.fixture
 def mock_llm_client():
     """Create a mock LLM client for testing."""
-    with patch('backend.utils.llm_client.LLMClient') as mock:
+    with patch('backend.processing.processing_utils.llm_client.LLMClient') as mock:
         client = mock.return_value
         
         # Mock entity extraction

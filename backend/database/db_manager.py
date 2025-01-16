@@ -6,8 +6,8 @@ from mysql.connector import Error
 import time
 import json
 
-from ..article.article import Article
-from ..utils.logger_config import setup_logger
+from backend.article.article import Article
+from backend.logger.logger import setup_logger
 
 logger = setup_logger(__name__)
 

@@ -8,7 +8,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 
-from fetch_articles import fetch_articles
+from backend.fetching.fetch_articles import fetch_articles
 from processing_articles import ArticleProcessor
 from db_manager import DatabaseManager
 from backend_api import app as api_app

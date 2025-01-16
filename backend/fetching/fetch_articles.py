@@ -3,8 +3,8 @@ import hashlib
 from datetime import datetime
 
 from backend.article.article import Article
-from backend.fetching.nyt_fetch_articles import nyt_fetch_articles
-from backend.utils.logger_config import setup_logger
+from .nyt_fetch_articles import nyt_fetch_articles
+from backend.logger.logger import setup_logger
 
 logger = setup_logger(__name__)
 

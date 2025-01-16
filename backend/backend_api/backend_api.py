@@ -6,11 +6,11 @@ from datetime import datetime
 from enum import Enum
 import os
 
-from ..article.article import Article
-from ..article.article_processor import ArticleProcessor
+from backend.article.article import Article
+from backend.processing.article_processor import ArticleProcessor
 from ..fetching.fetch_articles import fetch_articles
-from ..database.db_manager import DatabaseManager
-from ..utils.logger_config import setup_logger
+from backend.database.db_manager import DatabaseManager
+from backend.logger.logger import setup_logger
 
 logger = setup_logger(__name__)
 

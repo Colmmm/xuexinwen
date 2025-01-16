@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Set
 import json
-import logging
+from backend.logger.logger import setup_logger
 import opencc
 import csv
 from pathlib import Path
@@ -8,20 +8,20 @@ from pypinyin import pinyin, Style
 from pypinyin.contrib.tone_convert import to_tone
 from chinese_english_lookup import Dictionary
 
-from article.processed_article import (
+from backend.article.processed_article import (
     WordMetadataEntry,
     WordMetadata,
     VersionType,
     EntityType,
     GradeType
 )
-from processing_utils.llm_client import LLMClient
-from processing_utils.prompts.metadata_completion_prompt import (
+from .llm_client import LLMClient
+from .prompts.metadata_completion_prompt import (
     get_metadata_completion_prompt,
     validate_metadata_completion_response
 )
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 class MetadataGenerator:
     """
@@ -46,7 +46,7 @@ class MetadataGenerator:
             - pinyin: Tonal pinyin
         """
         grade_dict = {}
-        file_path = Path(__file__).parent.parent / "assets" / "official_tocfl_list_processed.csv"
+        file_path = Path(__file__).parent.parent.parent / "assets" / "official_tocfl_list_processed.csv"
         
         try:
             with open(file_path, mode='r', encoding='utf-8') as csv_file:

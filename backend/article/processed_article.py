@@ -1,7 +1,7 @@
 from typing import Dict, List, Union, Optional, Literal
 from datetime import datetime
 from dataclasses import dataclass
-from article import Article
+from .article import Article
 
 # Type for version names
 VersionType = Literal["native", "intermediate", "beginner"]
@@ -57,13 +57,15 @@ class ProcessedArticle(Article):
     Represents a processed article that extends the base Article class with
     segmented content for different proficiency levels and comprehensive word metadata.
     """
-    segmented_content: Dict[VersionType, List[str]]
-    word_metadata: WordMetadata
+    segmented_content: Dict[VersionType, List[str]] = None
+    word_metadata: Optional[WordMetadata] = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.segmented_content = {"native": [], "intermediate": [], "beginner": []}
-        self.word_metadata = WordMetadata()
+    def __post_init__(self):
+        """Initialize default values after dataclass initialization"""
+        if self.segmented_content is None:
+            self.segmented_content = {"native": [], "intermediate": [], "beginner": []}
+        if self.word_metadata is None:
+            self.word_metadata = WordMetadata()
 
     def update_word_metadata(self, new_metadata: WordMetadata) -> None:
         """

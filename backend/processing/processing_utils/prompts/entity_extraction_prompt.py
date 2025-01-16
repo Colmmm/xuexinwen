@@ -1,3 +1,5 @@
+from typing import Optional
+
 def get_entity_extraction_prompt(mandarin_content: str, english_content: Optional[str] = None) -> str:
     """
     Generate a prompt for entity extraction from parallel Chinese and English texts.

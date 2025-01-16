@@ -2,11 +2,9 @@ import os
 import json
 import requests
 from typing import Optional, Callable
-from logging import logging
+from ...logger.logger import setup_logger
 
-# Configure logging
-logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # Custom exception classes
 class LLMClientError(Exception):

@@ -4,12 +4,12 @@ from datetime import datetime
 import pandas as pd
 from typing import Dict
 from backend.article.article import Article
-from backend.article.article_processor import ArticleProcessor
+from backend.processing.article_processor import ArticleProcessor
 
 @pytest.fixture
 def mock_llm_client():
     """Create a mock LLM client."""
-    with patch('backend.utils.llm_client.LLMClient') as mock:
+    with patch('..utils.llm_client.LLMClient') as mock:
         client = mock.return_value
         
         # Mock entity extraction
@@ -76,7 +76,7 @@ def sample_article():
 @pytest.fixture
 def mock_article_processor(mock_tocfl_data):
     """Create an ArticleProcessor with mocked dependencies."""
-    with patch('backend.preprocessing.tocfl_tagger.TOCFLTagger') as mock_tagger:
+    with patch('..preprocessing.tocfl_tagger.TOCFLTagger') as mock_tagger:
         # Configure the mock tagger to use our mock data
         mock_tagger.return_value.df = mock_tocfl_data
         # Return processor with any path (it will be mocked)

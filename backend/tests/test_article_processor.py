@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 from typing import Dict
-from backend.article.article_processor import ArticleProcessor
+from backend.processing.article_processor import ArticleProcessor
 from backend.article.article import Article
 
 @pytest.fixture
@@ -38,11 +38,11 @@ def sample_article():
 @pytest.fixture
 def mock_processor(mock_components):
     """Create an ArticleProcessor with mocked components."""
-    with patch('backend.preprocessing.entity_extraction.EntityExtractor') as mock_ee, \
-         patch('backend.preprocessing.tocfl_tagger.TOCFLTagger') as mock_tt, \
-         patch('backend.preprocessing.segmentation.Segmenter') as mock_seg, \
-         patch('backend.postprocessing.html_wrapper.HTMLWrapper') as mock_hw, \
-         patch('backend.main_processing.simplify_articles.ArticleSimplifier') as mock_as:
+    with patch('..preprocessing.entity_extraction.EntityExtractor') as mock_ee, \
+         patch('..preprocessing.tocfl_tagger.TOCFLTagger') as mock_tt, \
+         patch('..preprocessing.segmentation.Segmenter') as mock_seg, \
+         patch('..postprocessing.html_wrapper.HTMLWrapper') as mock_hw, \
+         patch('..main_processing.simplify_articles.ArticleSimplifier') as mock_as:
         
         # Set up mock returns
         mock_ee.return_value = mock_components['entity_extractor']

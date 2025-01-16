@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 from typing import Dict
-from backend.preprocessing.entity_extraction import EntityExtractor
+from backend.processing.processing_utils.entity_extractor import EntityExtractor
 from backend.article.article import Article
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def entity_extractor():
 def test_entity_extraction(entity_extractor, sample_article, mock_llm_response):
     """Test the extraction of entities from article content."""
     # Mock the LLM client's extract_entities method
-    with patch('backend.utils.llm_client.LLMClient.extract_entities') as mock_extract:
+    with patch('..utils.llm_client.LLMClient.extract_entities') as mock_extract:
         mock_extract.return_value = mock_llm_response
         
         # Extract entities
@@ -82,7 +82,7 @@ def test_entity_extraction(entity_extractor, sample_article, mock_llm_response):
 @pytest.mark.llm
 def test_entity_extraction_empty_response(entity_extractor, sample_article):
     """Test handling of empty response from LLM."""
-    with patch('backend.utils.llm_client.LLMClient.extract_entities') as mock_extract:
+    with patch('..utils.llm_client.LLMClient.extract_entities') as mock_extract:
         mock_extract.return_value = []
         
         entities = entity_extractor.extract_entities(sample_article)
@@ -93,7 +93,7 @@ def test_entity_extraction_empty_response(entity_extractor, sample_article):
 @pytest.mark.llm
 def test_entity_extraction_invalid_response(entity_extractor, sample_article):
     """Test handling of invalid response from LLM."""
-    with patch('backend.utils.llm_client.LLMClient.extract_entities') as mock_extract:
+    with patch('..utils.llm_client.LLMClient.extract_entities') as mock_extract:
         # Missing required fields
         mock_extract.return_value = [
             {"word": "马斯克"},  # Missing type and english

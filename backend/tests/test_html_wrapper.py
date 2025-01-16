@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from ..postprocessing.html_wrapper import HTMLWrapper
+from backend.postprocessing.html_wrapper import HTMLWrapper
 from ..article.article import Article
 
 @pytest.fixture

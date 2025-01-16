@@ -1,10 +1,10 @@
 from typing import Dict, List, Optional
-from processing_utils.prompts.entity_extraction_prompt import get_entity_extraction_prompt
-from processing_utils.llm_client import LLMClient, APIRequestError, ValidationError
+from .prompts.entity_extraction_prompt import get_entity_extraction_prompt
+from .llm_client import LLMClient, APIRequestError, ValidationError
 import json
-import logging
+from backend.logger.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 class EntityExtractor:
     def __init__(self):

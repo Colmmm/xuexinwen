@@ -1,10 +1,10 @@
 from typing import Dict, Optional
 import os
 
-from processing_utils.entity_extractor import EntityExtractor
-from processing_utils.segmenter import Segmenter
-from processing_utils.simplifier import Simplifier
-from processing_utils.metadata_generator import MetadataGenerator
+from .processing_utils.entity_extractor import EntityExtractor
+from .processing_utils.segmenter import Segmenter
+from .processing_utils.simplifier import Simplifier
+from .processing_utils.metadata_generator import MetadataGenerator
 from backend.article.processed_article import ProcessedArticle
 from backend.article.article import Article
 

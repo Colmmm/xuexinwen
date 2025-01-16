@@ -1,9 +1,9 @@
 from typing import Dict, List, Optional
-from processing_utils.prompts.simplification_prompt import get_simplification_prompt
-from processing_utils.llm_client import LLMClient, APIRequestError, ValidationError
+from backend.processing.processing_utils.prompts.simplification_prompt import get_simplification_prompt
+from .llm_client import LLMClient, APIRequestError, ValidationError
 import json
-from logging.logger_config import setup_logger
-from article.processed_article import ProcessedArticle
+from backend.logger.logger import setup_logger
+from backend.article.processed_article import ProcessedArticle
 logger = setup_logger(__name__)
 
 class Simplifier:
