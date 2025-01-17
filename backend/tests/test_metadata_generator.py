@@ -44,10 +44,10 @@ def mock_dictionary():
 @pytest.fixture
 def metadata_generator(mock_dictionary):
     """Create a MetadataGenerator instance with mocked dependencies."""
-    with patch('..processing.processing_utils.metadata_generator.Dictionary') as mock_dict_class, \
-         patch('..processing.processing_utils.metadata_generator.opencc.OpenCC') as mock_opencc, \
-         patch('..processing.processing_utils.metadata_generator.pinyin') as mock_pinyin, \
-         patch('..processing.processing_utils.metadata_generator.to_tone') as mock_to_tone:
+    with patch('backend.processing.processing_utils.metadata_generator.Dictionary') as mock_dict_class, \
+         patch('backend.processing.processing_utils.metadata_generator.opencc.OpenCC') as mock_opencc, \
+         patch('backend.processing.processing_utils.metadata_generator.pinyin') as mock_pinyin, \
+         patch('backend.processing.processing_utils.metadata_generator.to_tone') as mock_to_tone:
         mock_dict_class.return_value = mock_dictionary
         # Mock OpenCC converter
         mock_converter = Mock()
@@ -157,7 +157,7 @@ def test_generate_from_segments_with_existing_metadata(metadata_generator):
     assert hello_entry.grade == "A1"
     assert set(hello_entry.presence_in_versions) == {"native", "intermediate"}
 
-@patch('..processing.processing_utils.metadata_generator.LLMClient')
+@patch('backend.processing.processing_utils.metadata_generator.LLMClient')
 def test_fill_missing_metadata(mock_llm, metadata_generator):
     """Test filling missing metadata using LLM."""
     # Setup mock LLM response
