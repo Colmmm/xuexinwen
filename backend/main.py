@@ -9,11 +9,11 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 
 from backend.fetching.fetch_articles import fetch_articles
-from processing_articles import ArticleProcessor
-from db_manager import DatabaseManager
-from backend_api import app as api_app
+from backend.processing.article_processor import ArticleProcessor
+from backend.database.db_manager import DatabaseManager
+from backend.backend_api import app as api_app
 
-from logger_config import setup_logger
+from backend.logger.logger import setup_logger
 logger = setup_logger(__name__)
 
 
