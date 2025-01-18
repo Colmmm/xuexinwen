@@ -137,6 +137,9 @@ class MetadataGenerator:
 
         # Try to get entry from dictionary
         word_entry = self.cedict.lookup(word)
+        print("\n\nHello!!!\n")
+        print(f"word={word} and word_entry={word_entry}")
+        print("\n\nbye\n\n")
         
         if word_entry and len(word_entry.definition_entries) > 0:
             # Get traditional form from dictionary
@@ -150,9 +153,9 @@ class MetadataGenerator:
         else:
             # Fallback to opencc for traditional if not in dictionary
             traditional = self.s2t_converter.convert(word)
-            # Fallback to pypinyin for pinyin
+            # Fallback to pypinyin for pinyin and ensure tonal conversion
             pinyin_result = pinyin(word, style=Style.TONE)
-            pinyin_str = ' '.join([syl[0] for syl in pinyin_result])
+            pinyin_str = self._convert_to_tonal_pinyin(' '.join([syl[0] for syl in pinyin_result]))
             # No definition available
             definition = ""
 
@@ -184,7 +187,10 @@ class MetadataGenerator:
 
     def _convert_to_tonal_pinyin(self, pinyin_str: str) -> str:
         """Convert numbered pinyin to tonal pinyin."""
-        return to_tone(pinyin_str)
+        # Split and convert each syllable
+        syllables = pinyin_str.split()
+        tonal_syllables = [to_tone(syl) for syl in syllables]
+        return ' '.join(tonal_syllables)
 
     def _fill_missing_metadata(self, metadata_collection: WordMetadata) -> None:
         """Fill in missing metadata fields using LLM."""

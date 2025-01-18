@@ -75,10 +75,10 @@ def test_generate_word_metadata_with_dictionary_entry(metadata_generator):
 
 def test_generate_word_metadata_without_dictionary_entry(metadata_generator):
     """Test generating metadata for a word not in the dictionary."""
-    metadata = metadata_generator._generate_word_metadata("测试", "native")
+    metadata = metadata_generator._generate_word_metadata("不存在的詞", "native")
     
     assert isinstance(metadata, WordMetadataEntry)
-    assert metadata.simplified == "测试"
+    assert metadata.simplified == "不存在的詞"
     assert metadata.traditional != ""  # Should have a traditional form from opencc
     assert metadata.pinyin != ""  # Should have pinyin from pypinyin
     assert metadata.definition == ""  # Should be empty since not in dictionary
